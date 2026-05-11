@@ -10,12 +10,12 @@ const TOTALS     = {"l1": 15, "l2": 94, "l3": 674, "l4": 3557, "l5": 451, "l6": 
 const APP_FAMILIES = ['Business Central','Finance and Operations','Customer Engagement','Azure'];
 
 const LCFG = {
-  1:{label:"L1 — End to End (EPIC)",  short:"L1",color:"#8b7cf8",bg:"rgba(139,124,248,0.12)",border:"rgba(139,124,248,0.3)"},
-  2:{label:"L2 — Process Area",        short:"L2",color:"#2dd4bf",bg:"rgba(45,212,191,0.12)", border:"rgba(45,212,191,0.3)"},
-  3:{label:"L3 — Business Process",    short:"L3",color:"#fb923c",bg:"rgba(251,146,60,0.12)", border:"rgba(251,146,60,0.3)"},
-  4:{label:"L4 — Scenario",            short:"L4",color:"#fbbf24",bg:"rgba(251,191,36,0.12)", border:"rgba(251,191,36,0.3)"},
-  5:{label:"L5 — System Process",      short:"L5",color:"#60a5fa",bg:"rgba(96,165,250,0.12)", border:"rgba(96,165,250,0.3)"},
-  6:{label:"L6 — Test Case / Config",  short:"L6",color:"#86efac",bg:"rgba(134,239,172,0.12)",border:"rgba(134,239,172,0.3)"},
+  1:{label:"L1 — End to End (EPIC)",  short:"L1",color:"#14BEF0",bg:"rgba(20,190,240,0.12)",border:"rgba(20,190,240,0.3)"},
+  2:{label:"L2 — Process Area",        short:"L2",color:"#0E94A8",bg:"rgba(14,148,168,0.12)", border:"rgba(14,148,168,0.3)"},
+  3:{label:"L3 — Business Process",    short:"L3",color:"#1377F0",bg:"rgba(19,119,240,0.12)", border:"rgba(19,119,240,0.3)"},
+  4:{label:"L4 — Scenario",            short:"L4",color:"#F16320",bg:"rgba(241,99,32,0.12)", border:"rgba(241,99,32,0.3)"},
+  5:{label:"L5 — System Process",      short:"L5",color:"#0E94A8",bg:"rgba(114,216,246,0.12)", border:"rgba(114,216,246,0.3)"},
+  6:{label:"L6 — Test Case / Config",  short:"L6",color:"#14F032",bg:"rgba(20,240,50,0.12)",border:"rgba(20,240,50,0.3)"},
 };
 
 function getPrefix(seq){ return seq.split(".")[0]; }
@@ -24,10 +24,10 @@ function getL5Parent(seq){ return seq.split(".").slice(0,5).join("."); }
 
 function fitInfo(f=""){
   const fl=(f||"").toLowerCase();
-  if(fl.includes("fit")&&!fl.includes("gap")) return {label:"Fit",        color:"#2dd4bf",bg:"rgba(45,212,191,0.12)"};
-  if(fl.includes("gap"))                       return {label:"Gap",        color:"#fb923c",bg:"rgba(251,146,60,0.12)"};
-  if(fl.includes("partial"))                   return {label:"Partial Fit",color:"#fbbf24",bg:"rgba(251,191,36,0.12)"};
-  return                                               {label:"Unspecified",color:"#6b7280",bg:"rgba(107,114,128,0.12)"};
+  if(fl.includes("fit")&&!fl.includes("gap")) return {label:"Fit",        color:"#0E94A8",bg:"rgba(14,148,168,0.12)"};
+  if(fl.includes("gap"))                       return {label:"Gap",        color:"#F16320",bg:"rgba(241,99,32,0.12)"};
+  if(fl.includes("partial"))                   return {label:"Partial Fit",color:"#F16320",bg:"rgba(241,99,32,0.12)"};
+  return                                               {label:"Unspecified",color:"#96898C",bg:"rgba(107,114,128,0.12)"};
 }
 function hasProduct(item,prod){
   return !prod||(item.p||"").split(";").map(s=>s.trim()).includes(prod);
@@ -41,13 +41,13 @@ function LBadge({level,style={}}){
 }
 function Chip({text,color,bg}){
   return <span style={{fontSize:11,padding:"2px 9px",borderRadius:20,
-    background:bg||"rgba(107,114,128,0.12)",color:color||"#9ca3af",fontWeight:500,whiteSpace:"nowrap"}}>{text}</span>;
+    background:bg||"rgba(107,114,128,0.12)",color:color||"#5a5255",fontWeight:500,whiteSpace:"nowrap"}}>{text}</span>;
 }
 function StatCard({label,value,color}){
-  return <div style={{background:"#161929",border:"1px solid #1e2235",borderRadius:10,
+  return <div style={{background:"#eef0f3",border:"1px solid #1e2235",borderRadius:10,
     padding:"12px 16px",flex:1,minWidth:80}}>
-    <div style={{fontSize:10,color:"#6b7280",textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:4}}>{label}</div>
-    <div style={{fontSize:22,fontWeight:700,color:color||"#e5e7eb",letterSpacing:"-0.5px"}}>
+    <div style={{fontSize:10,color:"#96898C",textTransform:"uppercase",letterSpacing:"0.7px",marginBottom:4}}>{label}</div>
+    <div style={{fontSize:22,fontWeight:700,color:color||"#231F20",letterSpacing:"-0.5px"}}>
       {typeof value==="number"?value.toLocaleString():value}
     </div>
   </div>;
@@ -56,12 +56,12 @@ function Breadcrumb({items}){
   return <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:16,fontSize:13,flexWrap:"wrap"}}>
     {items.map((item,i)=>(
       <span key={i} style={{display:"flex",alignItems:"center",gap:6}}>
-        {i>0&&<span style={{color:"#374151"}}>›</span>}
+        {i>0&&<span style={{color:"#5a5255"}}>›</span>}
         {item.onClick
-          ?<span onClick={item.onClick} style={{color:"#8b7cf8",cursor:"pointer"}}
+          ?<span onClick={item.onClick} style={{color:"#14BEF0",cursor:"pointer"}}
               onMouseEnter={e=>e.currentTarget.style.textDecoration="underline"}
               onMouseLeave={e=>e.currentTarget.style.textDecoration="none"}>{item.label}</span>
-          :<span style={{color:"#6b7280"}}>{item.label}</span>}
+          :<span style={{color:"#96898C"}}>{item.label}</span>}
       </span>
     ))}
   </div>;
@@ -70,9 +70,9 @@ function Breadcrumb({items}){
 /* ── OVERVIEW PANEL ── */
 function OverviewPanel({item,stats,onClose}){
   if(!item) return (
-    <div style={{width:290,minWidth:290,background:"#0d0f1a",borderLeft:"1px solid #1e2235",
+    <div style={{width:290,minWidth:290,background:"#ffffff",borderLeft:"1px solid #1e2235",
       display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-      padding:24,color:"#374151",textAlign:"center",gap:10}}>
+      padding:24,color:"#5a5255",textAlign:"center",gap:10}}>
       <div style={{fontSize:28,opacity:0.25}}>◎</div>
       <div style={{fontSize:12,lineHeight:1.6}}>Select any item to see<br/>its overview here</div>
     </div>
@@ -82,34 +82,34 @@ function OverviewPanel({item,stats,onClose}){
   const prods=(item.p||"").split(";").map(s=>s.trim()).filter(Boolean);
   const refs=(item.r||"").split(/\n|,(?=https?)/).map(s=>s.trim()).filter(Boolean);
   return (
-    <div style={{width:290,minWidth:290,background:"#0d0f1a",borderLeft:"1px solid #1e2235",
+    <div style={{width:290,minWidth:290,background:"#ffffff",borderLeft:"1px solid #1e2235",
       display:"flex",flexDirection:"column",flexShrink:0,overflowY:"auto"}}>
       <div style={{padding:"13px 14px 11px",borderBottom:"1px solid #1e2235",
         background:`linear-gradient(135deg,#0d0f1a,rgba(139,124,248,0.04))`,
         position:"sticky",top:0,zIndex:10}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:7}}>
           <LBadge level={item.l}/>
-          <button onClick={onClose} style={{background:"none",border:"none",color:"#374151",
+          <button onClick={onClose} style={{background:"none",border:"none",color:"#5a5255",
             fontSize:18,cursor:"pointer",lineHeight:1,padding:0}}
-            onMouseEnter={e=>e.currentTarget.style.color="#9ca3af"}
-            onMouseLeave={e=>e.currentTarget.style.color="#374151"}>×</button>
+            onMouseEnter={e=>e.currentTarget.style.color="#5a5255"}
+            onMouseLeave={e=>e.currentTarget.style.color="#5a5255"}>×</button>
         </div>
-        <div style={{fontFamily:"monospace",fontSize:10,color:"#374151",marginBottom:4}}>{item.q}</div>
-        <div style={{fontSize:13,fontWeight:700,color:"#f3f4f6",lineHeight:1.4}}>{item.t}</div>
+        <div style={{fontFamily:"monospace",fontSize:10,color:"#5a5255",marginBottom:4}}>{item.q}</div>
+        <div style={{fontSize:13,fontWeight:700,color:"#231F20",lineHeight:1.4}}>{item.t}</div>
       </div>
       <div style={{padding:"14px",flex:1}}>
         {item.d
-          ?<p style={{fontSize:12,color:"#9ca3af",lineHeight:1.75,margin:"0 0 14px 0"}}>{item.d}</p>
-          :<p style={{fontSize:12,color:"#374151",lineHeight:1.6,margin:"0 0 14px 0",fontStyle:"italic"}}>No description available.</p>
+          ?<p style={{fontSize:12,color:"#5a5255",lineHeight:1.75,margin:"0 0 14px 0"}}>{item.d}</p>
+          :<p style={{fontSize:12,color:"#5a5255",lineHeight:1.6,margin:"0 0 14px 0",fontStyle:"italic"}}>No description available.</p>
         }
         {stats&&stats.length>0&&<>
-          <div style={{fontSize:10,fontWeight:600,color:"#374151",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:7}}>At a glance</div>
+          <div style={{fontSize:10,fontWeight:600,color:"#96898C",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:7}}>At a glance</div>
           <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:14}}>
             {stats.map(s=>(
               <div key={s.label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-                padding:"6px 10px",background:"#161929",borderRadius:7,border:"1px solid #1e2235"}}>
-                <span style={{fontSize:11,color:"#6b7280"}}>{s.label}</span>
-                <span style={{fontSize:13,fontWeight:700,color:s.color||"#e5e7eb"}}>
+                padding:"6px 10px",background:"#eef0f3",borderRadius:7,border:"1px solid #1e2235"}}>
+                <span style={{fontSize:11,color:"#96898C"}}>{s.label}</span>
+                <span style={{fontSize:13,fontWeight:700,color:s.color||"#231F20"}}>
                   {typeof s.value==="number"?s.value.toLocaleString():s.value}
                 </span>
               </div>
@@ -117,27 +117,27 @@ function OverviewPanel({item,stats,onClose}){
           </div>
         </>}
         {prods.length>0&&<>
-          <div style={{fontSize:10,fontWeight:600,color:"#374151",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:7}}>Products</div>
+          <div style={{fontSize:10,fontWeight:600,color:"#96898C",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:7}}>Products</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:14}}>
-            {prods.map(p=><Chip key={p} text={p} color="#9ca3af" bg="rgba(107,114,128,0.1)"/>)}
+            {prods.map(p=><Chip key={p} text={p} color="#5a5255" bg="rgba(107,114,128,0.1)"/>)}
           </div>
         </>}
         {fi&&<>
-          <div style={{fontSize:10,fontWeight:600,color:"#374151",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:7}}>Fit / Gap Status</div>
+          <div style={{fontSize:10,fontWeight:600,color:"#96898C",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:7}}>Fit / Gap Status</div>
           <div style={{marginBottom:14}}><Chip text={fi.label} color={fi.color} bg={fi.bg}/></div>
         </>}
         {refs.length>0&&<>
-          <div style={{fontSize:10,fontWeight:600,color:"#374151",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:7}}>Microsoft Docs</div>
+          <div style={{fontSize:10,fontWeight:600,color:"#96898C",textTransform:"uppercase",letterSpacing:"0.8px",marginBottom:7}}>Microsoft Docs</div>
           {refs.map((r,i)=>r.startsWith("http")
             ?<div key={i} style={{marginBottom:5}}>
                <a href={r} target="_blank" rel="noreferrer"
-                 style={{color:"#8b7cf8",fontSize:11,wordBreak:"break-all",lineHeight:1.4,display:"block"}}
+                 style={{color:"#14BEF0",fontSize:11,wordBreak:"break-all",lineHeight:1.4,display:"block"}}
                  onMouseEnter={e=>e.currentTarget.style.textDecoration="underline"}
                  onMouseLeave={e=>e.currentTarget.style.textDecoration="none"}>
                  ↗ {r.replace(/https:\/\/learn\.microsoft\.com\/en-us\/dynamics365\//,"").replace("https://","")}
                </a>
              </div>
-            :<div key={i} style={{fontSize:11,color:"#6b7280",marginBottom:3}}>{r}</div>
+            :<div key={i} style={{fontSize:11,color:"#96898C",marginBottom:3}}>{r}</div>
           )}
         </>}
       </div>
@@ -154,19 +154,19 @@ function SysProcessRow({item, onSelect, selected}){
   return (
     <div style={{marginBottom:5}}>
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",
-        background:isSelected?"#1a1e30":"#0d0f1a",borderRadius:7,
-        border:`1px solid ${isSelected?"#60a5fa":"transparent"}`,transition:"all 0.12s"}}
-        onMouseEnter={e=>{if(!isSelected)e.currentTarget.style.background="#111320"}}
-        onMouseLeave={e=>{if(!isSelected)e.currentTarget.style.background="#0d0f1a"}}>
+        background:isSelected?"#e8eaed":"#ffffff",borderRadius:7,
+        border:`1px solid ${isSelected?"#0E94A8":"transparent"}`,transition:"all 0.12s"}}
+        onMouseEnter={e=>{if(!isSelected)e.currentTarget.style.background="#eef0f3"}}
+        onMouseLeave={e=>{if(!isSelected)e.currentTarget.style.background="#ffffff"}}>
         <span onClick={()=>onSelect({...item,l:5})} style={{fontFamily:"monospace",fontSize:10,
-          color:"#4b5563",minWidth:100,cursor:"pointer"}}>{item.q}</span>
-        <span onClick={()=>onSelect({...item,l:5})} style={{fontSize:12,color:isSelected?"#60a5fa":"#d1d5db",
+          color:"#7a6f72",minWidth:100,cursor:"pointer"}}>{item.q}</span>
+        <span onClick={()=>onSelect({...item,l:5})} style={{fontSize:12,color:isSelected?"#0E94A8":"#3d3738",
           flex:1,lineHeight:1.4,cursor:"pointer",fontWeight:isSelected?600:400}}>{item.t}</span>
         {tcList.length>0&&(
           <button onClick={()=>setOpen(o=>!o)}
             style={{fontSize:10,padding:"2px 8px",borderRadius:20,border:"1px solid #1e2235",
-              background:open?"rgba(134,239,172,0.1)":"transparent",
-              color:open?"#86efac":"#4b5563",cursor:"pointer",fontFamily:"inherit",
+              background:open?"rgba(20,240,50,0.1)":"transparent",
+              color:open?"#14F032":"#7a6f72",cursor:"pointer",fontFamily:"inherit",
               transition:"all 0.12s",whiteSpace:"nowrap"}}>
             {open?"▾":"▸"} {tcList.length} test{tcList.length!==1?"s":""}
           </button>
@@ -177,13 +177,13 @@ function SysProcessRow({item, onSelect, selected}){
           {tcList.map(tc=>(
             <div key={tc.q} onClick={()=>onSelect({...tc,l:6})}
               style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 10px",
-                background:selected?.q===tc.q?"#1a1e30":"#090b12",borderRadius:6,marginBottom:3,
-                cursor:"pointer",border:`1px solid ${selected?.q===tc.q?"#86efac":"transparent"}`,
+                background:selected?.q===tc.q?"#e8eaed":"#f0f2f5",borderRadius:6,marginBottom:3,
+                cursor:"pointer",border:`1px solid ${selected?.q===tc.q?"#14F032":"transparent"}`,
                 transition:"all 0.12s"}}
-              onMouseEnter={e=>{if(selected?.q!==tc.q)e.currentTarget.style.background="#0d0f1a"}}
-              onMouseLeave={e=>{if(selected?.q!==tc.q)e.currentTarget.style.background="#090b12"}}>
-              <span style={{fontFamily:"monospace",fontSize:9,color:"#374151",minWidth:108,paddingTop:1}}>{tc.q}</span>
-              <span style={{fontSize:12,color:selected?.q===tc.q?"#86efac":"#9ca3af",flex:1,lineHeight:1.4,
+              onMouseEnter={e=>{if(selected?.q!==tc.q)e.currentTarget.style.background="#ffffff"}}
+              onMouseLeave={e=>{if(selected?.q!==tc.q)e.currentTarget.style.background="#f0f2f5"}}>
+              <span style={{fontFamily:"monospace",fontSize:9,color:"#5a5255",minWidth:108,paddingTop:1}}>{tc.q}</span>
+              <span style={{fontSize:12,color:selected?.q===tc.q?"#14F032":"#5a5255",flex:1,lineHeight:1.4,
                 fontWeight:selected?.q===tc.q?600:400}}>{tc.t}</span>
             </div>
           ))}
@@ -211,18 +211,18 @@ function ScenarioSection({item, onSelect, selected}){
     <div style={{marginBottom:5}}>
       {/* L4 row */}
       <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"9px 12px",
-        background:isSelected?"#1a1e30":"#0a0c14",borderRadius:8,cursor:"pointer",
-        border:`1px solid ${isSelected?"#fbbf24":"transparent"}`,transition:"all 0.12s"}}
-        onMouseEnter={e=>{if(!isSelected)e.currentTarget.style.background="#0d0f1a"}}
-        onMouseLeave={e=>{if(!isSelected)e.currentTarget.style.background="#0a0c14"}}>
+        background:isSelected?"#e8eaed":"#ffffff",borderRadius:8,cursor:"pointer",
+        border:`1px solid ${isSelected?"#F16320":"transparent"}`,transition:"all 0.12s"}}
+        onMouseEnter={e=>{if(!isSelected)e.currentTarget.style.background="#ffffff"}}
+        onMouseLeave={e=>{if(!isSelected)e.currentTarget.style.background="#ffffff"}}>
         <span onClick={()=>onSelect(item)} style={{fontFamily:"monospace",fontSize:10,
-          color:"#374151",minWidth:88,paddingTop:2}}>{item.q}</span>
+          color:"#5a5255",minWidth:88,paddingTop:2}}>{item.q}</span>
         <div style={{flex:1}} onClick={()=>onSelect(item)}>
-          <div style={{fontSize:13,color:isSelected?"#fbbf24":"#d1d5db",marginBottom:3,
+          <div style={{fontSize:13,color:isSelected?"#F16320":"#3d3738",marginBottom:3,
             lineHeight:1.4,fontWeight:isSelected?600:400}}>{item.t}</div>
           <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center"}}>
-            {prods.map(p=><span key={p} style={{fontSize:10,color:"#4b5563"}}>{p}</span>)}
-            {prods.length>0&&<span style={{fontSize:10,color:"#374151"}}>·</span>}
+            {prods.map(p=><span key={p} style={{fontSize:10,color:"#7a6f72"}}>{p}</span>)}
+            {prods.length>0&&<span style={{fontSize:10,color:"#5a5255"}}>·</span>}
             <Chip text={fi.label} color={fi.color} bg={fi.bg}/>
           </div>
         </div>
@@ -231,13 +231,13 @@ function ScenarioSection({item, onSelect, selected}){
           <button onClick={e=>{e.stopPropagation();setSpOpen(o=>!o);}}
             title="View system processes and test cases"
             style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1,
-              padding:"3px 8px",borderRadius:7,border:`1px solid ${spOpen?"#60a5fa":"#1e2235"}`,
-              background:spOpen?"rgba(96,165,250,0.08)":"transparent",
+              padding:"3px 8px",borderRadius:7,border:`1px solid ${spOpen?"#0E94A8":"rgba(20,190,240,0.2)"}`,
+              background:spOpen?"rgba(114,216,246,0.08)":"transparent",
               cursor:"pointer",transition:"all 0.12s",flexShrink:0}}>
-            <span style={{fontSize:10,color:spOpen?"#60a5fa":"#4b5563",fontWeight:600,whiteSpace:"nowrap"}}>
+            <span style={{fontSize:10,color:spOpen?"#0E94A8":"#7a6f72",fontWeight:600,whiteSpace:"nowrap"}}>
               {spOpen?"▾":"▸"} {spList.length} sys
             </span>
-            {totalTc>0&&<span style={{fontSize:9,color:spOpen?"#86efac":"#374151",whiteSpace:"nowrap"}}>
+            {totalTc>0&&<span style={{fontSize:9,color:spOpen?"#14F032":"#5a5255",whiteSpace:"nowrap"}}>
               {totalTc} tests
             </span>}
           </button>
@@ -249,9 +249,9 @@ function ScenarioSection({item, onSelect, selected}){
         <div style={{marginLeft:14,marginTop:5,paddingLeft:10,
           borderLeft:"2px solid rgba(96,165,250,0.2)"}}>
           <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.8px",textTransform:"uppercase",
-            color:"#60a5fa",marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
+            color:"#0E94A8",marginBottom:7,display:"flex",alignItems:"center",gap:6}}>
             <span>L5 — System Processes</span>
-            <span style={{fontWeight:400,color:"#374151"}}>click ▸ to expand test cases</span>
+            <span style={{fontWeight:400,color:"#5a5255"}}>click ▸ to expand test cases</span>
           </div>
           {spList.map(sp=><SysProcessRow key={sp.q} item={sp} onSelect={onSelect} selected={selected}/>)}
         </div>
@@ -274,44 +274,44 @@ function L3Accordion({item,l1key,onSelect,selected,prodFilter}){
   [allScenarios,prodFilter]);
   const dimmed=prodFilter&&!(PROD_INDEX[prodFilter]?.l3||[]).includes(item.q);
 
-  return <div style={{background:"#12141f",
-    border:`1px solid ${isSelected?"#fb923c":dimmed?"#141620":"#1e2235"}`,
-    borderLeft:`3px solid ${isSelected?"#fb923c":dimmed?"#1e2235":"#fb923c"}`,
+  return <div style={{background:"#ffffff",
+    border:`1px solid ${isSelected?"#F16320":dimmed?"#141620":"rgba(20,190,240,0.2)"}`,
+    borderLeft:`3px solid ${isSelected?"#F16320":dimmed?"rgba(20,190,240,0.2)":"#F16320"}`,
     borderRadius:10,overflow:"hidden",marginBottom:7,opacity:dimmed?0.3:1,transition:"all 0.15s"}}>
     <div style={{padding:"11px 14px",display:"flex",alignItems:"center",gap:10,
-      background:open||isSelected?"#161929":"transparent",transition:"background 0.1s"}}
-      onMouseEnter={e=>{if(!dimmed)e.currentTarget.style.background="#161929"}}
-      onMouseLeave={e=>e.currentTarget.style.background=open||isSelected?"#161929":"transparent"}>
+      background:open||isSelected?"#f0fbff":"transparent",transition:"background 0.1s"}}
+      onMouseEnter={e=>{if(!dimmed)e.currentTarget.style.background="#eef0f3"}}
+      onMouseLeave={e=>e.currentTarget.style.background=open||isSelected?"#eef0f3":"transparent"}>
       <span onClick={()=>!dimmed&&onSelect(item)} style={{fontFamily:"monospace",fontSize:10,
-        color:"#4b5563",minWidth:90,cursor:"pointer"}}>{item.q}</span>
+        color:"#7a6f72",minWidth:90,cursor:"pointer"}}>{item.q}</span>
       <span onClick={()=>!dimmed&&onSelect(item)} style={{fontSize:13,fontWeight:600,flex:1,
-        color:isSelected?"#fb923c":"#e5e7eb",lineHeight:1.3,cursor:"pointer"}}>{item.t}</span>
+        color:isSelected?"#F16320":"#231F20",lineHeight:1.3,cursor:"pointer"}}>{item.t}</span>
       <div style={{display:"flex",gap:5,flexShrink:0}}>
         {item.sc>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,
-          background:"rgba(251,191,36,0.1)",color:"#fbbf24",fontWeight:600}}>
+          background:"rgba(241,99,32,0.1)",color:"#F16320",fontWeight:600}}>
           {prodFilter&&open?`${scenarios.length}/${item.sc}`:`${item.sc}`} scen
         </span>}
         {item.sp>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,
-          background:"rgba(96,165,250,0.1)",color:"#60a5fa",fontWeight:600}}>{item.sp} sys</span>}
+          background:"rgba(114,216,246,0.1)",color:"#0E94A8",fontWeight:600}}>{item.sp} sys</span>}
         {item.tc>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,
-          background:"rgba(134,239,172,0.1)",color:"#86efac",fontWeight:600}}>{item.tc} tests</span>}
+          background:"rgba(20,240,50,0.1)",color:"#14F032",fontWeight:600}}>{item.tc} tests</span>}
       </div>
       {!dimmed&&<span onClick={()=>setOpen(o=>!o)}
-        style={{color:"#4b5563",fontSize:11,transform:open?"rotate(90deg)":"none",
+        style={{color:"#7a6f72",fontSize:11,transform:open?"rotate(90deg)":"none",
           transition:"transform 0.2s",flexShrink:0,cursor:"pointer",padding:"0 2px"}}>▶</span>}
     </div>
     {open&&!dimmed&&<div style={{padding:"12px 14px 14px",borderTop:"1px solid #1e2235"}}>
-      {item.d&&<p style={{fontSize:13,color:"#9ca3af",lineHeight:1.65,marginBottom:12}}>{item.d}</p>}
+      {item.d&&<p style={{fontSize:13,color:"#5a5255",lineHeight:1.65,marginBottom:12}}>{item.d}</p>}
       {scenarios.length>0
         ?<>
           <div style={{fontSize:10,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",
-            color:"#fbbf24",marginBottom:8}}>
+            color:"#F16320",marginBottom:8}}>
             L4 — Scenarios ({scenarios.length}{prodFilter&&scenarios.length!==item.sc?` of ${item.sc}`:""})
-            {item.sp>0&&<span style={{color:"#60a5fa",marginLeft:8}}>· expand ▸ for system processes & tests</span>}
+            {item.sp>0&&<span style={{color:"#0E94A8",marginLeft:8}}>· expand ▸ for system processes & tests</span>}
           </div>
           {scenarios.map(s=><ScenarioSection key={s.q} item={s} onSelect={onSelect} selected={selected}/>)}
         </>
-        :<div style={{fontSize:13,color:"#4b5563",fontStyle:"italic"}}>
+        :<div style={{fontSize:13,color:"#7a6f72",fontStyle:"italic"}}>
           {prodFilter?"No scenarios match this filter.":"No scenarios recorded."}
         </div>
       }
@@ -341,30 +341,30 @@ function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter}){
     <Breadcrumb items={[{label:"Home",onClick:onBack},{label:l1.t,onClick:()=>onL1(l1idx)},{label:l2.t}]}/>
     <div onClick={()=>onSelect(l2)}
       style={{background:"linear-gradient(135deg,#161929,#1a1e30)",
-        border:`1px solid ${selected?.q===l2.q?"#2dd4bf":"#1e2235"}`,
+        border:`1px solid ${selected?.q===l2.q?"#0E94A8":"rgba(20,190,240,0.2)"}`,
         borderRadius:12,padding:18,marginBottom:16,cursor:"pointer",transition:"border-color 0.15s",
         position:"relative",overflow:"hidden"}}
-      onMouseEnter={e=>{if(selected?.q!==l2.q)e.currentTarget.style.borderColor="#374151"}}
-      onMouseLeave={e=>{if(selected?.q!==l2.q)e.currentTarget.style.borderColor="#1e2235"}}>
+      onMouseEnter={e=>{if(selected?.q!==l2.q)e.currentTarget.style.borderColor="#5a5255"}}
+      onMouseLeave={e=>{if(selected?.q!==l2.q)e.currentTarget.style.borderColor="rgba(20,190,240,0.2)"}}>
       <div style={{position:"absolute",top:"-40%",right:"-5%",width:180,height:180,
-        background:"radial-gradient(circle,rgba(45,212,191,0.05) 0%,transparent 70%)",pointerEvents:"none"}}/>
+        background:"radial-gradient(circle,rgba(14,148,168,0.05) 0%,transparent 70%)",pointerEvents:"none"}}/>
       <LBadge level={2} style={{marginBottom:7,display:"inline-block"}}/>
-      <div style={{fontSize:16,fontWeight:700,color:"#f3f4f6",lineHeight:1.3,marginBottom:3}}>{l2.t}</div>
-      <div style={{fontFamily:"monospace",fontSize:10,color:"#374151"}}>{l2.q} · click to view overview →</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#231F20",lineHeight:1.3,marginBottom:3}}>{l2.t}</div>
+      <div style={{fontFamily:"monospace",fontSize:10,color:"#5a5255"}}>{l2.q} · click to view overview →</div>
     </div>
     <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-      <StatCard label="Processes" value={prodFilter?`${visibleL3s.length}/${l3s.length}`:l3s.length} color="#fb923c"/>
-      <StatCard label="Scenarios" value={l4c} color="#fbbf24"/>
-      <StatCard label="Sys Procs" value={l3sWithCount.reduce((a,x)=>a+(x.sp||0),0)} color="#60a5fa"/>
-      <StatCard label="Test Cases" value={l3sWithCount.reduce((a,x)=>a+(x.tc||0),0)} color="#86efac"/>
+      <StatCard label="Processes" value={prodFilter?`${visibleL3s.length}/${l3s.length}`:l3s.length} color="#F16320"/>
+      <StatCard label="Scenarios" value={l4c} color="#F16320"/>
+      <StatCard label="Sys Procs" value={l3sWithCount.reduce((a,x)=>a+(x.sp||0),0)} color="#0E94A8"/>
+      <StatCard label="Test Cases" value={l3sWithCount.reduce((a,x)=>a+(x.tc||0),0)} color="#14F032"/>
     </div>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:11}}>
       <LBadge level={3}/>
-      <span style={{fontSize:13,fontWeight:600,color:"#e5e7eb"}}>Business Processes</span>
-      <span style={{fontSize:11,color:"#4b5563"}}>{visibleL3s.length} · click title to preview · ▶ to expand scenarios</span>
+      <span style={{fontSize:13,fontWeight:600,color:"#231F20"}}>Business Processes</span>
+      <span style={{fontSize:11,color:"#7a6f72"}}>{visibleL3s.length} · click title to preview · ▶ to expand scenarios</span>
     </div>
     {visibleL3s.length===0
-      ?<div style={{fontSize:13,color:"#4b5563",fontStyle:"italic",padding:"20px 0"}}>No processes match the selected product filter.</div>
+      ?<div style={{fontSize:13,color:"#7a6f72",fontStyle:"italic",padding:"20px 0"}}>No processes match the selected product filter.</div>
       :visibleL3s.map(l3=><L3Accordion key={l3.q} item={l3} l1key={l1key} onSelect={onSelect} selected={selected} prodFilter={prodFilter}/>)
     }
   </div>;
@@ -389,31 +389,31 @@ function L1View({l1idx,onL2,onBack,onSelect,selected,prodFilter,famFilter}){
     <Breadcrumb items={[{label:"Home",onClick:onBack},{label:l1.t}]}/>
     <div onClick={()=>onSelect(l1Item)}
       style={{background:"linear-gradient(135deg,#161929,#1a1e30)",
-        border:`1px solid ${selected?.q===l1.q?"#8b7cf8":"#1e2235"}`,
+        border:`1px solid ${selected?.q===l1.q?"#14BEF0":"rgba(20,190,240,0.2)"}`,
         borderRadius:12,padding:18,marginBottom:16,cursor:"pointer",transition:"border-color 0.15s",
         position:"relative",overflow:"hidden"}}
-      onMouseEnter={e=>{if(selected?.q!==l1.q)e.currentTarget.style.borderColor="#374151"}}
-      onMouseLeave={e=>{if(selected?.q!==l1.q)e.currentTarget.style.borderColor="#1e2235"}}>
+      onMouseEnter={e=>{if(selected?.q!==l1.q)e.currentTarget.style.borderColor="#5a5255"}}
+      onMouseLeave={e=>{if(selected?.q!==l1.q)e.currentTarget.style.borderColor="rgba(20,190,240,0.2)"}}>
       <div style={{position:"absolute",top:"-40%",right:"-5%",width:200,height:200,
-        background:"radial-gradient(circle,rgba(139,124,248,0.06) 0%,transparent 70%)",pointerEvents:"none"}}/>
+        background:"radial-gradient(circle,rgba(20,190,240,0.06) 0%,transparent 70%)",pointerEvents:"none"}}/>
       <LBadge level={1} style={{marginBottom:7,display:"inline-block"}}/>
-      <div style={{fontSize:16,fontWeight:700,color:"#f3f4f6",lineHeight:1.3,marginBottom:3}}>{l1.t}</div>
-      <div style={{fontFamily:"monospace",fontSize:10,color:"#374151"}}>{l1.q} · click to view overview →</div>
+      <div style={{fontSize:16,fontWeight:700,color:"#231F20",lineHeight:1.3,marginBottom:3}}>{l1.t}</div>
+      <div style={{fontFamily:"monospace",fontSize:10,color:"#5a5255"}}>{l1.q} · click to view overview →</div>
     </div>
     <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-      <StatCard label="Process Areas" value={prodFilter?`${visible.length}/${l2s.length}`:l1.l2} color="#2dd4bf"/>
-      <StatCard label="Processes"     value={l1.l3} color="#fb923c"/>
-      <StatCard label="Scenarios"     value={l1.l4} color="#fbbf24"/>
-      <StatCard label="Sys Procs"     value={l1.l5} color="#60a5fa"/>
-      <StatCard label="Test Cases"    value={l1.l6} color="#86efac"/>
+      <StatCard label="Process Areas" value={prodFilter?`${visible.length}/${l2s.length}`:l1.l2} color="#0E94A8"/>
+      <StatCard label="Processes"     value={l1.l3} color="#F16320"/>
+      <StatCard label="Scenarios"     value={l1.l4} color="#F16320"/>
+      <StatCard label="Sys Procs"     value={l1.l5} color="#0E94A8"/>
+      <StatCard label="Test Cases"    value={l1.l6} color="#14F032"/>
     </div>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:11}}>
       <LBadge level={2}/>
-      <span style={{fontSize:13,fontWeight:600,color:"#e5e7eb"}}>Process Areas</span>
-      <span style={{fontSize:11,color:"#4b5563"}}>{visible.length}{prodFilter&&visible.length<l2s.length?` of ${l2s.length}`:""} — click title to drill down</span>
+      <span style={{fontSize:13,fontWeight:600,color:"#231F20"}}>Process Areas</span>
+      <span style={{fontSize:11,color:"#7a6f72"}}>{visible.length}{prodFilter&&visible.length<l2s.length?` of ${l2s.length}`:""} — click title to drill down</span>
     </div>
     {visible.length===0
-      ?<div style={{fontSize:13,color:"#4b5563",fontStyle:"italic",padding:"20px 0"}}>No process areas match the selected product filter.</div>
+      ?<div style={{fontSize:13,color:"#7a6f72",fontStyle:"italic",padding:"20px 0"}}>No process areas match the selected product filter.</div>
       :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
         {visible.map(l2=><AreaCard key={l2.q} item={l2} selected={selected} onSelect={onSelect} onDrill={()=>onL2(l1idx,l2.q)}/>)}
       </div>
@@ -434,36 +434,36 @@ function HomeView({onL1,onSelect,selected,prodFilter,famFilter}){
     <div style={{background:"linear-gradient(135deg,#161929 0%,#1a1e30 100%)",
       border:"1px solid #1e2235",borderRadius:14,padding:22,marginBottom:18,position:"relative",overflow:"hidden"}}>
       <div style={{position:"absolute",top:"-30%",right:"-5%",width:260,height:260,
-        background:"radial-gradient(circle,rgba(139,124,248,0.07) 0%,transparent 70%)",pointerEvents:"none"}}/>
-      <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.8px",textTransform:"uppercase",color:"#8b7cf8",
-        marginBottom:8,background:"rgba(139,124,248,0.1)",display:"inline-block",padding:"3px 10px",
-        borderRadius:20,border:"1px solid rgba(139,124,248,0.3)"}}>Microsoft Dynamics 365</div>
-      <div style={{fontSize:20,fontWeight:700,letterSpacing:"-0.5px",color:"#f3f4f6",marginBottom:3}}>Standard Business Process Catalogue</div>
-      <div style={{fontFamily:"monospace",fontSize:11,color:"#374151",marginBottom:10}}>March 2026 · v2</div>
-      <p style={{fontSize:12,color:"#9ca3af",lineHeight:1.7,maxWidth:560,margin:0}}>
+        background:"radial-gradient(circle,rgba(20,190,240,0.07) 0%,transparent 70%)",pointerEvents:"none"}}/>
+      <div style={{fontSize:10,fontWeight:700,letterSpacing:"0.8px",textTransform:"uppercase",color:"#14BEF0",
+        marginBottom:8,background:"rgba(20,190,240,0.1)",display:"inline-block",padding:"3px 10px",
+        borderRadius:20,border:"1px solid rgba(20,190,240,0.3)"}}>iCatalyst · Dynamics Done Differently</div>
+      <div style={{fontSize:20,fontWeight:700,letterSpacing:"-0.5px",color:"#231F20",marginBottom:3}}>Standard Business Process Catalogue</div>
+      <div style={{fontFamily:"monospace",fontSize:11,color:"#5a5255",marginBottom:10}}>March 2026 · v2</div>
+      <p style={{fontSize:12,color:"#5a5255",lineHeight:1.7,maxWidth:560,margin:0}}>
         Navigate from EPICs through process areas, processes, scenarios, and system processes down to test cases. Click any item to see its overview in the right-hand panel.
       </p>
     </div>
     <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-      {[{label:"EPICs",value:TOTALS.l1,color:"#8b7cf8"},
-        {label:"Process Areas",value:TOTALS.l2,color:"#2dd4bf"},
-        {label:"Processes",value:TOTALS.l3,color:"#fb923c"},
-        {label:"Scenarios",value:TOTALS.l4,color:"#fbbf24"},
-        {label:"Sys Processes",value:TOTALS.l5,color:"#60a5fa"},
-        {label:"Test Cases",value:TOTALS.l6,color:"#86efac"},
+      {[{label:"EPICs",value:TOTALS.l1,color:"#14BEF0"},
+        {label:"Process Areas",value:TOTALS.l2,color:"#0E94A8"},
+        {label:"Processes",value:TOTALS.l3,color:"#F16320"},
+        {label:"Scenarios",value:TOTALS.l4,color:"#F16320"},
+        {label:"Sys Processes",value:TOTALS.l5,color:"#0E94A8"},
+        {label:"Test Cases",value:TOTALS.l6,color:"#14F032"},
       ].map(s=><StatCard key={s.label} {...s}/>)}
     </div>
     <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
       {Object.entries(LCFG).map(([k,v])=>(
-        <div key={k} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#6b7280"}}>
+        <div key={k} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#96898C"}}>
           <div style={{width:6,height:6,borderRadius:"50%",background:v.color}}/>{v.label}
         </div>
       ))}
     </div>
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:11}}>
       <LBadge level={1}/>
-      <span style={{fontSize:13,fontWeight:600,color:"#e5e7eb"}}>End-to-End Processes</span>
-      <span style={{fontSize:11,color:"#4b5563"}}>{famFilter?`${visibleCount} of ${SUMMARY.length}`:SUMMARY.length}</span>
+      <span style={{fontSize:13,fontWeight:600,color:"#231F20"}}>End-to-End Processes</span>
+      <span style={{fontSize:11,color:"#7a6f72"}}>{famFilter?`${visibleCount} of ${SUMMARY.length}`:SUMMARY.length}</span>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
       {filteredSummary.map(l1=><EpicCard key={l1.q} item={l1} dim={l1.dim} selected={selected} onSelect={()=>!l1.dim&&onSelect(l1)} onClick={()=>!l1.dim&&onL1(l1.i)}/>)}
@@ -491,30 +491,30 @@ function SearchView({q,prod,onSelect}){
     if(!q||!text) return text;
     const esc=q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
     return text.replace(new RegExp(`(${esc})`,"gi"),
-      "<mark style='background:rgba(139,124,248,0.25);color:#a78bfa;border-radius:2px;padding:0 1px'>$1</mark>");
+      "<mark style='background:rgba(20,190,240,0.25);color:#a78bfa;border-radius:2px;padding:0 1px'>$1</mark>");
   }
-  if(!q&&!prod) return <div style={{padding:"60px 22px",textAlign:"center",color:"#4b5563"}}>Start typing to search</div>;
-  if(!results.length) return <div style={{padding:"60px 22px",textAlign:"center",color:"#4b5563"}}>No results found</div>;
+  if(!q&&!prod) return <div style={{padding:"60px 22px",textAlign:"center",color:"#7a6f72"}}>Start typing to search</div>;
+  if(!results.length) return <div style={{padding:"60px 22px",textAlign:"center",color:"#7a6f72"}}>No results found</div>;
   return <div style={{padding:"18px 22px"}}>
-    <div style={{fontSize:12,color:"#4b5563",marginBottom:12}}>
+    <div style={{fontSize:12,color:"#7a6f72",marginBottom:12}}>
       {results.length}{results.length>=120?"+":""} result{results.length!==1?"s":""}
-      {q?<> for <span style={{color:"#e5e7eb"}}>"{q}"</span></>:null}
-      {prod?<> in <span style={{color:"#e5e7eb"}}>{prod}</span></>:null}
-      <span style={{color:"#374151"}}> · click to preview</span>
+      {q?<> for <span style={{color:"#231F20"}}>"{q}"</span></>:null}
+      {prod?<> in <span style={{color:"#231F20"}}>{prod}</span></>:null}
+      <span style={{color:"#5a5255"}}> · click to preview</span>
     </div>
     {results.map(item=>(
       <div key={item.q} onClick={()=>onSelect(item)}
-        style={{background:"#12141f",border:"1px solid #1e2235",borderRadius:10,
+        style={{background:"#f7f8fa",border:"1px solid #1e2235",borderRadius:10,
           padding:"11px 14px",marginBottom:6,cursor:"pointer",transition:"background 0.1s"}}
-        onMouseEnter={e=>e.currentTarget.style.background="#161929"}
-        onMouseLeave={e=>e.currentTarget.style.background="#12141f"}>
+        onMouseEnter={e=>e.currentTarget.style.background="#f0fbff"}
+        onMouseLeave={e=>e.currentTarget.style.background="#ffffff"}>
         <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4}}>
           <LBadge level={item.l}/>
-          <span style={{fontSize:13,fontWeight:600,color:"#e5e7eb"}}
+          <span style={{fontSize:13,fontWeight:600,color:"#231F20"}}
             dangerouslySetInnerHTML={{__html:hl(item.t,q)}}/>
         </div>
-        <div style={{fontSize:11,color:"#374151",marginBottom:item.d?3:0}}>{item.l1t} · {item.q}</div>
-        {item.d&&<div style={{fontSize:12,color:"#4b5563",lineHeight:1.5}}
+        <div style={{fontSize:11,color:"#5a5255",marginBottom:item.d?3:0}}>{item.l1t} · {item.q}</div>
+        {item.d&&<div style={{fontSize:12,color:"#7a6f72",lineHeight:1.5}}
           dangerouslySetInnerHTML={{__html:hl(item.d.slice(0,140),q)+(item.d.length>140?"…":"")}}/>}
       </div>
     ))}
@@ -526,23 +526,23 @@ function EpicCard({item,dim,selected,onSelect,onClick}){
   const isSelected=selected?.q===item.q;
   const [hov,setHov]=useState(false);
   return <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-    style={{background:hov&&!dim?"#161929":"#12141f",opacity:dim?0.25:1,
-      border:`1px solid ${isSelected?"#8b7cf8":dim?"#141620":"#1e2235"}`,
-      borderTop:`3px solid ${isSelected?"#8b7cf8":dim?"#1e2235":"#8b7cf8"}`,
+    style={{background:hov&&!dim?"#e8f7fd":"#ffffff",opacity:dim?0.25:1,
+      border:`1px solid ${isSelected?"#14BEF0":dim?"#141620":"rgba(20,190,240,0.2)"}`,
+      borderTop:`3px solid ${isSelected?"#14BEF0":dim?"rgba(20,190,240,0.2)":"#14BEF0"}`,
       borderRadius:10,padding:14,cursor:dim?"default":"pointer",transition:"all 0.13s",
       transform:hov&&!dim?"translateY(-1px)":"none"}}>
-    <div style={{fontFamily:"monospace",fontSize:10,color:"#374151",marginBottom:4}}>{item.q}</div>
-    <div onClick={onClick} style={{fontSize:13,fontWeight:600,color:isSelected?"#8b7cf8":"#e5e7eb",
+    <div style={{fontFamily:"monospace",fontSize:10,color:"#5a5255",marginBottom:4}}>{item.q}</div>
+    <div onClick={onClick} style={{fontSize:13,fontWeight:600,color:isSelected?"#14BEF0":"#231F20",
       marginBottom:5,lineHeight:1.35,cursor:"pointer"}}
       onMouseEnter={e=>e.currentTarget.style.textDecoration="underline"}
       onMouseLeave={e=>e.currentTarget.style.textDecoration="none"}>{item.t}</div>
-    <div style={{fontSize:11,color:"#4b5563",marginBottom:8}}>{item.l2} areas · {item.l3} processes</div>
+    <div style={{fontSize:11,color:"#7a6f72",marginBottom:8}}>{item.l2} areas · {item.l3} processes</div>
     <button onClick={e=>{e.stopPropagation();onSelect(item);}}
-      style={{fontSize:10,padding:"2px 9px",borderRadius:20,border:`1px solid ${isSelected?"#8b7cf8":"#1e2235"}`,
-        background:isSelected?"rgba(139,124,248,0.15)":"transparent",color:isSelected?"#8b7cf8":"#4b5563",
+      style={{fontSize:10,padding:"2px 9px",borderRadius:20,border:`1px solid ${isSelected?"#14BEF0":"rgba(20,190,240,0.2)"}`,
+        background:isSelected?"rgba(20,190,240,0.15)":"transparent",color:isSelected?"#14BEF0":"#7a6f72",
         cursor:"pointer",fontFamily:"inherit",transition:"all 0.12s"}}
-      onMouseEnter={e=>{e.currentTarget.style.borderColor="#8b7cf8";e.currentTarget.style.color="#8b7cf8"}}
-      onMouseLeave={e=>{if(!isSelected){e.currentTarget.style.borderColor="#1e2235";e.currentTarget.style.color="#4b5563"}}}>
+      onMouseEnter={e=>{e.currentTarget.style.borderColor="#14BEF0";e.currentTarget.style.color="#14BEF0"}}
+      onMouseLeave={e=>{if(!isSelected){e.currentTarget.style.borderColor="rgba(20,190,240,0.2)";e.currentTarget.style.color="#7a6f72"}}}>
       {isSelected?"◉ Overview":"○ Overview"}
     </button>
   </div>;
@@ -551,21 +551,21 @@ function AreaCard({item,selected,onSelect,onDrill}){
   const isSelected=selected?.q===item.q;
   const [hov,setHov]=useState(false);
   return <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-    style={{background:hov?"#161929":"#12141f",border:`1px solid ${isSelected?"#2dd4bf":"#1e2235"}`,
+    style={{background:hov?"#e8f7fd":"#ffffff",border:`1px solid ${isSelected?"#0E94A8":"rgba(20,190,240,0.2)"}`,
       borderTop:"3px solid #2dd4bf",borderRadius:10,padding:14,transition:"all 0.13s",
       transform:hov?"translateY(-1px)":"none"}}>
-    <div style={{fontFamily:"monospace",fontSize:10,color:"#374151",marginBottom:4}}>{item.q}</div>
-    <div onClick={onDrill} style={{fontSize:13,fontWeight:600,color:isSelected?"#2dd4bf":"#e5e7eb",
+    <div style={{fontFamily:"monospace",fontSize:10,color:"#5a5255",marginBottom:4}}>{item.q}</div>
+    <div onClick={onDrill} style={{fontSize:13,fontWeight:600,color:isSelected?"#0E94A8":"#231F20",
       marginBottom:5,lineHeight:1.35,cursor:"pointer"}}
       onMouseEnter={e=>e.currentTarget.style.textDecoration="underline"}
       onMouseLeave={e=>e.currentTarget.style.textDecoration="none"}>{item.t}</div>
-    <div style={{fontSize:11,color:"#4b5563",marginBottom:8}}>{item.l3c} processes · {item.l4c} scenarios</div>
+    <div style={{fontSize:11,color:"#7a6f72",marginBottom:8}}>{item.l3c} processes · {item.l4c} scenarios</div>
     <button onClick={e=>{e.stopPropagation();onSelect(item);}}
-      style={{fontSize:10,padding:"2px 9px",borderRadius:20,border:`1px solid ${isSelected?"#2dd4bf":"#1e2235"}`,
-        background:isSelected?"rgba(45,212,191,0.12)":"transparent",color:isSelected?"#2dd4bf":"#4b5563",
+      style={{fontSize:10,padding:"2px 9px",borderRadius:20,border:`1px solid ${isSelected?"#0E94A8":"rgba(20,190,240,0.2)"}`,
+        background:isSelected?"rgba(14,148,168,0.12)":"transparent",color:isSelected?"#0E94A8":"#7a6f72",
         cursor:"pointer",fontFamily:"inherit",transition:"all 0.12s"}}
-      onMouseEnter={e=>{e.currentTarget.style.borderColor="#2dd4bf";e.currentTarget.style.color="#2dd4bf"}}
-      onMouseLeave={e=>{if(!isSelected){e.currentTarget.style.borderColor="#1e2235";e.currentTarget.style.color="#4b5563"}}}>
+      onMouseEnter={e=>{e.currentTarget.style.borderColor="#0E94A8";e.currentTarget.style.color="#0E94A8"}}
+      onMouseLeave={e=>{if(!isSelected){e.currentTarget.style.borderColor="rgba(20,190,240,0.2)";e.currentTarget.style.color="#7a6f72"}}}>
       {isSelected?"◉ Overview":"○ Overview"}
     </button>
   </div>;
@@ -577,23 +577,23 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
 
   // Family button colours
   const FAM_COLORS = {
-    'Business Central':     {color:'#2dd4bf',bg:'rgba(45,212,191,0.12)', border:'rgba(45,212,191,0.35)'},
-    'Finance and Operations':{color:'#8b7cf8',bg:'rgba(139,124,248,0.12)',border:'rgba(139,124,248,0.35)'},
-    'Customer Engagement':  {color:'#fb923c',bg:'rgba(251,146,60,0.12)', border:'rgba(251,146,60,0.35)'},
-    'Azure':                {color:'#60a5fa',bg:'rgba(96,165,250,0.12)', border:'rgba(96,165,250,0.35)'},
+    'Business Central':     {color:'#2dd4bf',bg:'rgba(14,148,168,0.12)', border:'rgba(14,148,168,0.35)'},
+    'Finance and Operations':{color:'#14BEF0',bg:'rgba(20,190,240,0.12)',border:'rgba(20,190,240,0.4)'},
+    'Customer Engagement':  {color:'#fb923c',bg:'rgba(241,99,32,0.12)', border:'rgba(241,99,32,0.35)'},
+    'Azure':                {color:'#60a5fa',bg:'rgba(114,216,246,0.12)', border:'rgba(114,216,246,0.35)'},
   };
 
-  return <div style={{width:238,minWidth:238,background:"#0d0f1a",borderRight:"1px solid #1e2235",display:"flex",flexDirection:"column",flexShrink:0}}>
+  return <div style={{width:238,minWidth:238,background:"#ffffff",borderRight:"1px solid #1e2235",display:"flex",flexDirection:"column",flexShrink:0}}>
 
     {/* Application Family Filter */}
     <div style={{padding:"12px 12px 11px",borderBottom:"1px solid #1e2235",flexShrink:0}}>
-      <div style={{fontSize:10,fontWeight:600,letterSpacing:"1px",color:"#374151",textTransform:"uppercase",marginBottom:9}}>
+      <div style={{fontSize:10,fontWeight:600,letterSpacing:"1px",color:"#96898C",textTransform:"uppercase",marginBottom:9}}>
         Application Family
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:5}}>
         {APP_FAMILIES.map(fam=>{
           const active=famFilter===fam;
-          const fc=FAM_COLORS[fam]||{color:"#9ca3af",bg:"rgba(107,114,128,0.12)",border:"rgba(107,114,128,0.3)"};
+          const fc=FAM_COLORS[fam]||{color:"#5a5255",bg:"rgba(107,114,128,0.12)",border:"rgba(107,114,128,0.3)"};
           const l1count = FAM_INDEX[fam]?.l1?.length||0;
           const l3count = FAM_INDEX[fam]?.l3?.length||0;
           return <button key={fam} onClick={()=>setFamFilter(active?"":fam)}
@@ -601,8 +601,8 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
               width:"100%",padding:"7px 10px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",
               transition:"all 0.13s",textAlign:"left",
               background:active?fc.bg:"transparent",
-              border:`1px solid ${active?fc.border:"#1e2235"}`,
-              color:active?fc.color:"#6b7280",
+              border:`1px solid ${active?fc.border:"rgba(20,190,240,0.2)"}`,
+              color:active?fc.color:"#96898C",
               fontWeight:active?600:400}}>
             <span style={{fontSize:12}}>{fam}</span>
             <span style={{fontSize:10,opacity:0.7}}>{l1count} EPICs · {l3count} procs</span>
@@ -610,16 +610,16 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
         })}
         {famFilter&&<button onClick={()=>setFamFilter("")}
           style={{fontSize:11,padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",
-            background:"rgba(251,146,60,0.08)",color:"#fb923c",border:"1px solid rgba(251,146,60,0.25)",
+            background:"rgba(241,99,32,0.08)",color:"#F16320",border:"1px solid rgba(241,99,32,0.25)",
             fontWeight:600,marginTop:2}}>✕ Clear filter</button>}
       </div>
     </div>
 
     {/* EPIC list */}
     <div style={{overflowY:"auto",flex:1,padding:"7px 0"}}>
-      <div style={{padding:"7px 12px 5px",fontSize:10,fontWeight:600,letterSpacing:"1px",color:"#374151",textTransform:"uppercase"}}>
+      <div style={{padding:"7px 12px 5px",fontSize:10,fontWeight:600,letterSpacing:"1px",color:"#96898C",textTransform:"uppercase"}}>
         End-to-End Processes
-        {famFilter&&<span style={{marginLeft:6,color:"#8b7cf8",fontWeight:400}}>
+        {famFilter&&<span style={{marginLeft:6,color:"#14BEF0",fontWeight:400}}>
           ({filteredPrefixes?.size||0}/{SUMMARY.length})
         </span>}
       </div>
@@ -628,13 +628,13 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
         const dim=!!filteredPrefixes&&!filteredPrefixes.has(prefix);
         return <div key={l1.q} onClick={()=>!dim&&onL1(i)}
           style={{display:"flex",alignItems:"center",gap:7,padding:"7px 12px",cursor:dim?"default":"pointer",
-            borderLeft:`3px solid ${active?"#8b7cf8":"transparent"}`,
-            background:active?"rgba(139,124,248,0.07)":"transparent",opacity:dim?0.22:1,transition:"all 0.1s"}}
-          onMouseEnter={e=>{if(!active&&!dim)e.currentTarget.style.background="#161929"}}
-          onMouseLeave={e=>{if(!active)e.currentTarget.style.background=active?"rgba(139,124,248,0.07)":"transparent"}}>
-          <span style={{fontFamily:"monospace",fontSize:9,color:"#374151",minWidth:18}}>{String(i+1).padStart(2,"0")}</span>
-          <span style={{fontSize:11,color:active?"#8b7cf8":"#9ca3af",flex:1,lineHeight:1.35}}>{l1.t}</span>
-          <span style={{fontSize:9,color:"#374151",background:"#161929",borderRadius:10,padding:"1px 5px",flexShrink:0}}>{l1.l3}</span>
+            borderLeft:`3px solid ${active?"#14BEF0":"transparent"}`,
+            background:active?"rgba(20,190,240,0.1)":"transparent",opacity:dim?0.22:1,transition:"all 0.1s"}}
+          onMouseEnter={e=>{if(!active&&!dim)e.currentTarget.style.background="#eef0f3"}}
+          onMouseLeave={e=>{if(!active)e.currentTarget.style.background=active?"rgba(20,190,240,0.1)":"transparent"}}>
+          <span style={{fontFamily:"monospace",fontSize:9,color:"#5a5255",minWidth:18}}>{String(i+1).padStart(2,"0")}</span>
+          <span style={{fontSize:11,color:active?"#14BEF0":"#5a5255",flex:1,lineHeight:1.35}}>{l1.t}</span>
+          <span style={{fontSize:9,color:"#5a5255",background:"#eef0f3",borderRadius:10,padding:"1px 5px",flexShrink:0}}>{l1.l3}</span>
         </div>;
       })}
     </div>
@@ -644,24 +644,24 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
 /* ── TOP BAR ── */
 function TopBar({searchQ,setSearchQ,onHome}){
   const inputRef=useRef();
-  return <div style={{background:"#0d0f1a",borderBottom:"1px solid #1e2235",padding:"0 18px",
+  return <div style={{background:"#ffffff",borderBottom:"1px solid #1e2235",padding:"0 18px",
     height:50,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100,flexShrink:0}}>
     <div onClick={onHome} style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer",flexShrink:0}}>
-      <div style={{width:24,height:24,background:"#8b7cf8",borderRadius:6,display:"flex",
+      <div style={{width:24,height:24,background:"#14BEF0",borderRadius:6,display:"flex",
         alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:700,color:"white"}}>D</div>
-      <span style={{fontSize:13,fontWeight:600,color:"#e5e7eb",letterSpacing:"-0.2px"}}>D365 Process Catalogue</span>
-      <span style={{fontSize:10,color:"#374151",marginLeft:4}}>MAR 2026</span>
+      <span style={{fontSize:13,fontWeight:600,color:"#231F20",letterSpacing:"-0.2px"}}>D365 Process Catalogue</span>
+      <span style={{fontSize:10,color:"#5a5255",marginLeft:4}}>MAR 2026</span>
     </div>
     <div style={{marginLeft:"auto",position:"relative"}}>
-      <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:12,color:"#4b5563",pointerEvents:"none"}}>🔍</span>
+      <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:12,color:"#7a6f72",pointerEvents:"none"}}>🔍</span>
       <input ref={inputRef} value={searchQ} onChange={e=>setSearchQ(e.target.value)}
         placeholder="Search all levels..."
-        style={{background:"#161929",border:"1px solid #1e2235",borderRadius:8,
-          padding:"5px 26px 5px 27px",color:"#e5e7eb",fontSize:12,width:220,outline:"none",transition:"border-color 0.15s"}}
-        onFocus={e=>e.target.style.borderColor="#8b7cf8"}
-        onBlur={e=>e.target.style.borderColor="#1e2235"}/>
+        style={{background:"#eef0f3",border:"1px solid #1e2235",borderRadius:8,
+          padding:"5px 26px 5px 27px",color:"#231F20",fontSize:12,width:220,outline:"none",transition:"border-color 0.15s"}}
+        onFocus={e=>e.target.style.borderColor="#14BEF0"}
+        onBlur={e=>e.target.style.borderColor="rgba(20,190,240,0.2)"}/>
       {searchQ&&<span onClick={()=>{setSearchQ("");inputRef.current?.focus();}}
-        style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",cursor:"pointer",color:"#4b5563",fontSize:15,lineHeight:1}}>×</span>}
+        style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",cursor:"pointer",color:"#7a6f72",fontSize:15,lineHeight:1}}>×</span>}
     </div>
   </div>;
 }
@@ -676,11 +676,11 @@ function useOverviewStats(selected){
       const sum=SUMMARY.find(s=>s.q===selected.q);
       if(!sum) return [];
       return [
-        {label:"Process Areas",value:sum.l2,color:"#2dd4bf"},
-        {label:"Processes",    value:sum.l3,color:"#fb923c"},
-        {label:"Scenarios",    value:sum.l4,color:"#fbbf24"},
-        {label:"Sys Processes",value:sum.l5,color:"#60a5fa"},
-        {label:"Test Cases",   value:sum.l6,color:"#86efac"},
+        {label:"Process Areas",value:sum.l2,color:"#0E94A8"},
+        {label:"Processes",    value:sum.l3,color:"#F16320"},
+        {label:"Scenarios",    value:sum.l4,color:"#F16320"},
+        {label:"Sys Processes",value:sum.l5,color:"#0E94A8"},
+        {label:"Test Cases",   value:sum.l6,color:"#14F032"},
       ];
     }
     if(selected.l===2){
@@ -690,25 +690,25 @@ function useOverviewStats(selected){
       const l3s=all.filter(x=>x.l===3&&x.q.startsWith(l2prefix+"."));
       const sp=l3s.reduce((a,x)=>a+(x.sp||0),0);
       const tc=l3s.reduce((a,x)=>a+(x.tc||0),0);
-      return [{label:"Processes",value:l3c,color:"#fb923c"},{label:"Scenarios",value:l4c,color:"#fbbf24"},
-              {label:"Sys Procs",value:sp,color:"#60a5fa"},{label:"Test Cases",value:tc,color:"#86efac"}];
+      return [{label:"Processes",value:l3c,color:"#F16320"},{label:"Scenarios",value:l4c,color:"#F16320"},
+              {label:"Sys Procs",value:sp,color:"#0E94A8"},{label:"Test Cases",value:tc,color:"#14F032"}];
     }
     if(selected.l===3){
       const pfx3=selected.q.split(".").slice(0,3).join(".")+".";
       const sc=all.filter(x=>x.l===4&&x.q.startsWith(pfx3)).length;
-      return [{label:"Scenarios",value:sc,color:"#fbbf24"},
-              {label:"Sys Procs",value:selected.sp||0,color:"#60a5fa"},
-              {label:"Test Cases",value:selected.tc||0,color:"#86efac"}];
+      return [{label:"Scenarios",value:sc,color:"#F16320"},
+              {label:"Sys Procs",value:selected.sp||0,color:"#0E94A8"},
+              {label:"Test Cases",value:selected.tc||0,color:"#14F032"}];
     }
     if(selected.l===4){
       const spList=(SP_INDEX[prefix]||{})[selected.q]||[];
       const tcCount=spList.reduce((a,sp)=>a+((TC_INDEX[prefix]||{})[sp.q]||[]).length,0);
-      return [{label:"Sys Processes",value:spList.length,color:"#60a5fa"},
-              {label:"Test Cases",   value:tcCount,      color:"#86efac"}];
+      return [{label:"Sys Processes",value:spList.length,color:"#0E94A8"},
+              {label:"Test Cases",   value:tcCount,      color:"#14F032"}];
     }
     if(selected.l===5){
       const tcList=(TC_INDEX[prefix]||{})[selected.q]||[];
-      return [{label:"Test Cases",value:tcList.length,color:"#86efac"}];
+      return [{label:"Test Cases",value:tcList.length,color:"#14F032"}];
     }
     return [];
   },[selected]);
@@ -735,8 +735,8 @@ export default function App(){
     else setView(l2q?"l2":l1idx!==null?"l1":"home");
   }
 
-  return <div style={{fontFamily:"system-ui,-apple-system,sans-serif",background:"#0a0c14",
-    color:"#e5e7eb",minHeight:"100vh",display:"flex",flexDirection:"column"}}>
+  return <div style={{fontFamily:"system-ui,-apple-system,sans-serif",background:"#ffffff",
+    color:"#231F20",minHeight:"100vh",display:"flex",flexDirection:"column"}}>
     <TopBar searchQ={searchQ} setSearchQ={handleSearch} onHome={goHome}/>
     <div style={{display:"flex",flex:1,overflow:"hidden",height:"calc(100vh - 50px)"}}>
       <Sidebar l1idx={l1idx} onL1={goL1} famFilter={famFilter} setFamFilter={setFamFilter}/>
