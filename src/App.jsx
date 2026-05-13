@@ -869,15 +869,25 @@ function ScenarioStepsList({ l3item, l1key }) {
 function L3Accordion({item,l1key,onSelect,selected,prodFilter,famFilter}){
   const [open,setOpen]=useState(false);
   const isSelected=selected?.q===item.q;
+  const allowedFamProds=useMemo(()=>famFilter?FAMILY_PRODUCTS[famFilter]:null,[famFilter]);
   const allScenarios=useMemo(()=>{
     if(!open) return [];
     const pfx=item.q.split(".").slice(0,3).join(".")+".";
     return (PER_L1[l1key]||[]).filter(x=>x.l===4&&x.q.startsWith(pfx));
   },[open,item.q,l1key]);
-  const scenarios=useMemo(()=>
-    prodFilter?allScenarios.filter(s=>hasProduct(s,prodFilter)):allScenarios,
-  [allScenarios,prodFilter]);
-  const dimmed=prodFilter&&!(PROD_INDEX[prodFilter]?.l3||[]).includes(item.q);
+  const scenarios=useMemo(()=>{
+    let s=allScenarios;
+    if(prodFilter) s=s.filter(x=>hasProduct(x,prodFilter));
+    if(allowedFamProds) s=s.filter(x=>{
+      if(!x.p) return false;
+      return x.p.split(';').map(p=>p.trim()).some(p=>allowedFamProds.has(p));
+    });
+    return s;
+  },[allScenarios,prodFilter,allowedFamProds]);
+  // Dim this L3 if it's not in the family's L3 list (when famFilter active)
+  const dimmedByFam=famFilter&&!(FAM_INDEX[famFilter]?.l3||[]).includes(item.q);
+  const dimmedByProd=prodFilter&&!(PROD_INDEX[prodFilter]?.l3||[]).includes(item.q);
+  const dimmed=dimmedByFam||dimmedByProd;
 
   return <div style={{background:"#edf2fd",
     border:`1px solid ${isSelected?"#F16320":dimmed?"#141620":"rgba(20,190,240,0.2)"}`,
@@ -894,7 +904,7 @@ function L3Accordion({item,l1key,onSelect,selected,prodFilter,famFilter}){
       <div style={{display:"flex",gap:5,flexShrink:0}}>
         {item.sc>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,
           background:"rgba(241,99,32,0.1)",color:"#F16320",fontWeight:600}}>
-          {prodFilter&&open?`${scenarios.length}/${item.sc}`:`${item.sc}`} scen
+          {(prodFilter||famFilter)&&open?`${scenarios.length}/${item.sc}`:`${item.sc}`} scen
         </span>}
         {item.sp>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,
           background:"rgba(114,216,246,0.1)",color:"#0E94A8",fontWeight:600}}>{item.sp} sys</span>}
@@ -912,13 +922,13 @@ function L3Accordion({item,l1key,onSelect,selected,prodFilter,famFilter}){
         ?<>
           <div style={{fontSize:10,fontWeight:700,letterSpacing:"1px",textTransform:"uppercase",
             color:"#F16320",marginBottom:8}}>
-            L4 — Scenarios ({scenarios.length}{prodFilter&&scenarios.length!==item.sc?` of ${item.sc}`:""})
+            L4 — Scenarios ({scenarios.length}{(prodFilter||famFilter)&&scenarios.length!==item.sc?` of ${item.sc}`:""})
             {item.sp>0&&<span style={{color:"#0E94A8",marginLeft:8}}>· expand ▸ for system processes & tests</span>}
           </div>
           {scenarios.map(s=><ScenarioSection key={s.q} item={s} onSelect={onSelect} selected={selected}/>)}
         </>
         :<div style={{fontSize:13,color:"#3d3738",fontStyle:"italic"}}>
-          {prodFilter?"No scenarios match this filter.":"No scenarios recorded."}
+          {(prodFilter||famFilter)?"No scenarios match this filter.":"No scenarios recorded."}
         </div>
       }
     </div>}
@@ -932,14 +942,16 @@ function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter,famFilter}){
   const l2=all.find(i=>i.q===l2q);
   const l2prefix=l2q.split(".").slice(0,2).join(".");
   const l3s=useMemo(()=>all.filter(i=>i.l===3&&i.q.startsWith(l2prefix+".")),[l2q,l1key]);
+  const allowedL3s=useMemo(()=>famFilter?new Set(FAM_INDEX[famFilter]?.l3||[]):null,[famFilter]);
   const l3sWithCount=useMemo(()=>l3s.map(l3=>{
     const pfx=l3.q.split(".").slice(0,3).join(".")+".";
     const sc=all.filter(x=>x.l===4&&x.q.startsWith(pfx)).length;
     return {...l3,sc};
   }),[l3s]);
-  const visibleL3s=useMemo(()=>prodFilter
-    ?l3sWithCount.filter(l3=>(PROD_INDEX[prodFilter]?.l3||[]).includes(l3.q))
-    :l3sWithCount,[l3sWithCount,prodFilter]);
+  const visibleL3s=useMemo(()=>l3sWithCount.filter(l3=>
+    (!prodFilter||(PROD_INDEX[prodFilter]?.l3||[]).includes(l3.q))&&
+    (!allowedL3s||allowedL3s.has(l3.q))
+  ),[l3sWithCount,prodFilter,allowedL3s]);
   const l4c=l3sWithCount.reduce((a,x)=>a+x.sc,0);
   if(!l2) return null;
 
@@ -959,7 +971,7 @@ function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter,famFilter}){
       <div style={{fontFamily:"monospace",fontSize:10,color:"#231F20"}}>{l2.q} · click to view overview →</div>
     </div>
     <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-      <StatCard label="Processes" value={prodFilter?`${visibleL3s.length}/${l3s.length}`:l3s.length} color="#F16320"/>
+      <StatCard label="Processes" value={(famFilter||prodFilter)?`${visibleL3s.length}/${l3s.length}`:l3s.length} color="#F16320"/>
       <StatCard label="Scenarios" value={l4c} color="#F16320"/>
       <StatCard label="Sys Procs" value={l3sWithCount.reduce((a,x)=>a+(x.sp||0),0)} color="#0E94A8"/>
       <StatCard label="Test Cases" value={l3sWithCount.reduce((a,x)=>a+(x.tc||0),0)} color="#14F032"/>
@@ -970,7 +982,7 @@ function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter,famFilter}){
       <span style={{fontSize:11,color:"#3d3738"}}>{visibleL3s.length} · click title to preview · ▶ to expand scenarios</span>
     </div>
     {visibleL3s.length===0
-      ?<div style={{fontSize:13,color:"#3d3738",fontStyle:"italic",padding:"20px 0"}}>No processes match the selected product filter.</div>
+      ?<div style={{fontSize:13,color:"#3d3738",fontStyle:"italic",padding:"20px 0"}}>No processes match the selected filter.</div>
       :visibleL3s.map(l3=><L3Accordion key={l3.q} item={l3} l1key={l1key} onSelect={onSelect} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>)
     }
   </div>;
@@ -981,14 +993,16 @@ function L1View({l1idx,onL2,onBack,onSelect,selected,prodFilter,famFilter}){
   const l1=SUMMARY[l1idx]; const l1key=getPrefix(l1.q);
   const all=PER_L1[l1key]||[];
   const l2s=all.filter(i=>i.l===2);
+  const allowedL2s=useMemo(()=>famFilter?new Set(FAM_INDEX[famFilter]?.l2||[]):null,[famFilter]);
   const l2Cards=useMemo(()=>l2s.map(l2=>{
     const l2prefix=l2.q.split(".").slice(0,2).join(".");
     const l3c=all.filter(x=>x.l===3&&x.q.startsWith(l2prefix+".")).length;
     const l4c=all.filter(x=>x.l===4&&x.q.startsWith(l2prefix+".")).length;
     const matchesProd=!prodFilter||(PROD_INDEX[prodFilter]?.l2||[]).includes(l2.q);
-    return {...l2,l3c,l4c,matchesProd};
-  }),[l2s,prodFilter]);
-  const visible=prodFilter?l2Cards.filter(x=>x.matchesProd):l2Cards;
+    const matchesFam=!allowedL2s||allowedL2s.has(l2.q);
+    return {...l2,l3c,l4c,matchesProd,matchesFam};
+  }),[l2s,prodFilter,allowedL2s]);
+  const visible=l2Cards.filter(x=>(!prodFilter||x.matchesProd)&&(!allowedL2s||x.matchesFam));
   const l1Item=all.find(i=>i.l===1)||{...l1};
 
   return <div style={{padding:22}}>
@@ -1007,7 +1021,7 @@ function L1View({l1idx,onL2,onBack,onSelect,selected,prodFilter,famFilter}){
       <div style={{fontFamily:"monospace",fontSize:10,color:"#231F20"}}>{l1.q} · click to view overview →</div>
     </div>
     <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-      <StatCard label="Process Areas" value={prodFilter?`${visible.length}/${l2s.length}`:l1.l2} color="#0E94A8"/>
+      <StatCard label="Process Areas" value={famFilter?`${visible.length}/${l2s.length}`:l1.l2} color="#0E94A8"/>
       <StatCard label="Processes"     value={l1.l3} color="#F16320"/>
       <StatCard label="Scenarios"     value={l1.l4} color="#F16320"/>
       <StatCard label="Sys Procs"     value={l1.l5} color="#0E94A8"/>
@@ -1016,10 +1030,10 @@ function L1View({l1idx,onL2,onBack,onSelect,selected,prodFilter,famFilter}){
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:11}}>
       <LBadge level={2}/>
       <span style={{fontSize:13,fontWeight:600,color:"#231F20"}}>Process Areas</span>
-      <span style={{fontSize:11,color:"#3d3738"}}>{visible.length}{prodFilter&&visible.length<l2s.length?` of ${l2s.length}`:""} — click title to drill down</span>
+      <span style={{fontSize:11,color:"#3d3738"}}>{visible.length}{(famFilter||prodFilter)&&visible.length<l2s.length?` of ${l2s.length}`:""} — click title to drill down</span>
     </div>
     {visible.length===0
-      ?<div style={{fontSize:13,color:"#3d3738",fontStyle:"italic",padding:"20px 0"}}>No process areas match the selected product filter.</div>
+      ?<div style={{fontSize:13,color:"#3d3738",fontStyle:"italic",padding:"20px 0"}}>No process areas match the selected filter.</div>
       :<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
         {visible.map(l2=><AreaCard key={l2.q} item={l2} selected={selected} onSelect={onSelect} onDrill={()=>onL2(l1idx,l2.q)}/>)}
       </div>
