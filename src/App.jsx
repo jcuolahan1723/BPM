@@ -468,35 +468,30 @@ function getProdColor(products) {
 }
 
 /* Auto-generate a horizontal flow diagram from L3 data */
+// Direct mapping of Application Family → the product tags that belong to it.
+// This is the source of truth for diagram node filtering.
+const FAMILY_PRODUCTS = {
+  'Business Central':       new Set(['Business Central']),
+  'Finance and Operations': new Set(['Finance','Supply Chain Management','Field Service','Project Operations','Human Resources']),
+  'Customer Engagement':    new Set(['Sales','Customer Service','Customer Insights Journey','Customer Insights Data','Customer Voice']),
+  'Azure':                  new Set(['Azure']),
+};
+
 function AutoDiagram({ l3item, l1key, famFilter }) {
   const all = PER_L1[l1key] || [];
   const pfx = l3item.q.split('.').slice(0, 3).join('.') + '.';
 
-  // Build a set of L4 sequences allowed by the active family filter
-  const allowedL4s = useMemo(() => {
-    if (!famFilter) return null; // null = no filter, show all
-    return new Set(FAM_INDEX[famFilter]?.l3 || []);
-  }, [famFilter]);
-
   const scenarios = useMemo(() => {
     const all4 = all.filter(x => x.l === 4 && x.q.startsWith(pfx));
-    if (!allowedL4s) return all4;
-    // Filter to only scenarios whose products belong to the selected family.
-    // We check against FAM_INDEX l3 which contains l3 codes; for L4 nodes we
-    // match by checking whether the scenario's product string overlaps with the
-    // family's product set derived from PROD_INDEX keys that FAM_INDEX covers.
-    const famProds = new Set(
-      Object.keys(PROD_INDEX).filter(prod =>
-        (FAM_INDEX[famFilter]?.l3 || []).some(l3q =>
-          (PROD_INDEX[prod]?.l3 || []).includes(l3q)
-        )
-      )
-    );
+    if (!famFilter) return all4;
+    const allowed = FAMILY_PRODUCTS[famFilter];
+    if (!allowed) return all4;
+    // Keep only nodes whose product tag overlaps with the selected family's products
     return all4.filter(s => {
       if (!s.p) return false;
-      return s.p.split(';').map(p => p.trim()).some(p => famProds.has(p));
+      return s.p.split(';').map(p => p.trim()).some(p => allowed.has(p));
     });
-  }, [l3item.q, l1key, allowedL4s, famFilter]);
+  }, [l3item.q, l1key, famFilter]);
 
   const sysprocs = useMemo(() =>
     scenarios.map(s => ({
