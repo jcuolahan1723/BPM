@@ -468,13 +468,35 @@ function getProdColor(products) {
 }
 
 /* Auto-generate a horizontal flow diagram from L3 data */
-function AutoDiagram({ l3item, l1key }) {
+function AutoDiagram({ l3item, l1key, famFilter }) {
   const all = PER_L1[l1key] || [];
   const pfx = l3item.q.split('.').slice(0, 3).join('.') + '.';
 
-  const scenarios = useMemo(() =>
-    all.filter(x => x.l === 4 && x.q.startsWith(pfx)),
-  [l3item.q, l1key]);
+  // Build a set of L4 sequences allowed by the active family filter
+  const allowedL4s = useMemo(() => {
+    if (!famFilter) return null; // null = no filter, show all
+    return new Set(FAM_INDEX[famFilter]?.l3 || []);
+  }, [famFilter]);
+
+  const scenarios = useMemo(() => {
+    const all4 = all.filter(x => x.l === 4 && x.q.startsWith(pfx));
+    if (!allowedL4s) return all4;
+    // Filter to only scenarios whose products belong to the selected family.
+    // We check against FAM_INDEX l3 which contains l3 codes; for L4 nodes we
+    // match by checking whether the scenario's product string overlaps with the
+    // family's product set derived from PROD_INDEX keys that FAM_INDEX covers.
+    const famProds = new Set(
+      Object.keys(PROD_INDEX).filter(prod =>
+        (FAM_INDEX[famFilter]?.l3 || []).some(l3q =>
+          (PROD_INDEX[prod]?.l3 || []).includes(l3q)
+        )
+      )
+    );
+    return all4.filter(s => {
+      if (!s.p) return false;
+      return s.p.split(';').map(p => p.trim()).some(p => famProds.has(p));
+    });
+  }, [l3item.q, l1key, allowedL4s, famFilter]);
 
   const sysprocs = useMemo(() =>
     scenarios.map(s => ({
@@ -725,7 +747,7 @@ function ImageViewer({ seq, ext }) {
 }
 
 /* L3 Diagram Panel — checks for PNG/JPG, falls back to auto-generated */
-function L3DiagramPanel({ l3item, l1key }) {
+function L3DiagramPanel({ l3item, l1key, famFilter }) {
   const [mode, setMode]     = useState("diagram");
   const [imgExt, setImgExt] = useState(null); // null=checking | "png"|"jpg" | false
 
@@ -800,7 +822,7 @@ function L3DiagramPanel({ l3item, l1key }) {
                 fontSize:13,padding:"20px 0"}}>Checking for process map…</div>
             : hasImg
               ? <ImageViewer seq={l3item.q} ext={imgExt}/>
-              : <AutoDiagram l3item={l3item} l1key={l1key}/>
+              : <AutoDiagram l3item={l3item} l1key={l1key} famFilter={famFilter}/>
         )}
         {mode==="scenarios"&&(
           <ScenarioStepsList l3item={l3item} l1key={l1key}/>
@@ -849,7 +871,7 @@ function ScenarioStepsList({ l3item, l1key }) {
 
 
 /* ── L3 ACCORDION ── */
-function L3Accordion({item,l1key,onSelect,selected,prodFilter}){
+function L3Accordion({item,l1key,onSelect,selected,prodFilter,famFilter}){
   const [open,setOpen]=useState(false);
   const isSelected=selected?.q===item.q;
   const allScenarios=useMemo(()=>{
@@ -889,7 +911,7 @@ function L3Accordion({item,l1key,onSelect,selected,prodFilter}){
           transition:"transform 0.2s",flexShrink:0,cursor:"pointer",padding:"0 2px"}}>▶</span>}
     </div>
     {open&&!dimmed&&<div style={{padding:"12px 14px 14px",borderTop:"1px solid #1e2235"}}>
-      <L3DiagramPanel l3item={item} l1key={l1key}/>
+      <L3DiagramPanel l3item={item} l1key={l1key} famFilter={famFilter}/>
       {item.d&&<p style={{fontSize:13,color:"#231F20",lineHeight:1.65,marginBottom:12}}>{item.d}</p>}
       {scenarios.length>0
         ?<>
@@ -909,7 +931,7 @@ function L3Accordion({item,l1key,onSelect,selected,prodFilter}){
 }
 
 /* ── L2 VIEW ── */
-function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter}){
+function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter,famFilter}){
   const l1=SUMMARY[l1idx]; const l1key=getPrefix(l1.q);
   const all=PER_L1[l1key]||[];
   const l2=all.find(i=>i.q===l2q);
@@ -954,7 +976,7 @@ function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter}){
     </div>
     {visibleL3s.length===0
       ?<div style={{fontSize:13,color:"#3d3738",fontStyle:"italic",padding:"20px 0"}}>No processes match the selected product filter.</div>
-      :visibleL3s.map(l3=><L3Accordion key={l3.q} item={l3} l1key={l1key} onSelect={onSelect} selected={selected} prodFilter={prodFilter}/>)
+      :visibleL3s.map(l3=><L3Accordion key={l3.q} item={l3} l1key={l1key} onSelect={onSelect} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>)
     }
   </div>;
 }
@@ -1333,7 +1355,7 @@ export default function App(){
         {isSearching&&<SearchView q={searchQ} prod={prodFilter} onSelect={setSelected}/>}
         {!isSearching&&view==="home"&&<HomeView onL1={goL1} onSelect={setSelected} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>}
         {!isSearching&&view==="l1"&&l1idx!==null&&<L1View l1idx={l1idx} onL2={goL2} onBack={goHome} onSelect={setSelected} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>}
-        {!isSearching&&view==="l2"&&l1idx!==null&&l2q&&<L2View l1idx={l1idx} l2q={l2q} onBack={goHome} onL1={goL1} onSelect={setSelected} selected={selected} prodFilter={prodFilter}/>}
+        {!isSearching&&view==="l2"&&l1idx!==null&&l2q&&<L2View l1idx={l1idx} l2q={l2q} onBack={goHome} onL1={goL1} onSelect={setSelected} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>}
       </div>
       <OverviewPanel item={selected} stats={overviewStats} onClose={()=>setSelected(null)}/>
     </div>
