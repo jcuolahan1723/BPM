@@ -664,140 +664,145 @@ function AutoDiagram({ l3item, l1key }) {
   );
 }
 
-/* draw.io XML viewer */
-function DrawioViewer({ seq }) {
-  const [xml, setXml]       = useState(null);
-  const [status, setStatus] = useState('loading'); // loading | loaded | error
-  const containerId = `drawio-${seq.replace(/\./g, '-')}`;
-
-  useEffect(() => {
-    const url = `/diagrams/${seq}.drawio`;
-    fetch(url)
-      .then(r => {
-        if (!r.ok) throw new Error('not found');
-        return r.text();
-      })
-      .then(text => { setXml(text); setStatus('loaded'); })
-      .catch(() => setStatus('error'));
-  }, [seq]);
-
-  useEffect(() => {
-    if (status !== 'loaded' || !xml) return;
-    /* Load draw.io viewer library and render */
-    const existingScript = document.getElementById('drawio-script');
-    const doRender = () => {
-      const container = document.getElementById(containerId);
-      if (!container || !window.mxGraph) return;
-      container.innerHTML = '';
-      try {
-        /* Use draw.io's embedded viewer approach */
-        const div = document.createElement('div');
-        div.style.cssText = 'width:100%;height:100%;';
-        container.appendChild(div);
-        const graph = new window.mxGraph(div);
-        const doc = window.mxUtils.parseXml(xml);
-        const codec = new window.mxCodec(doc);
-        codec.decode(doc.documentElement, graph.getModel());
-        graph.fit();
-        graph.setEnabled(false);
-      } catch(e) {
-        container.innerHTML = `<div style="padding:16px;color:#96898C;font-size:13px">
-          Diagram loaded — <a href="/diagrams/${seq}.drawio" target="_blank"
-          style="color:#14BEF0">open in draw.io</a> to view interactively.</div>`;
-      }
-    };
-    if (existingScript) { doRender(); return; }
-    const script = document.createElement('script');
-    script.id = 'drawio-script';
-    script.src = 'https://cdn.jsdelivr.net/npm/mxgraph@4.2.2/javascript/mxClient.min.js';
-    script.onload = doRender;
-    document.head.appendChild(script);
-  }, [status, xml, containerId]);
-
-  if (status === 'loading') return (
-    <div style={{padding:'24px',textAlign:'center',color:'#96898C',fontSize:13}}>
-      Loading diagram…
-    </div>
-  );
-
-  if (status === 'error') return null; /* Fall through to auto-diagram */
-
+/* PNG/JPG image viewer with lightbox */
+function ImageViewer({ seq, ext }) {
+  const [zoomed, setZoomed] = useState(false);
+  const url = `/diagrams/${seq}.${ext}`;
   return (
-    <div id={containerId}
-      style={{width:'100%',minHeight:320,background:'#fafbfc',
-        borderRadius:8,border:'1px solid rgba(20,190,240,0.2)',
-        overflow:'hidden',position:'relative'}}>
-      <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(20,190,240,0.15)',
-        display:'flex',alignItems:'center',justifyContent:'space-between'}}>
-        <span style={{fontSize:11,color:'#96898C'}}>draw.io process map</span>
-        <a href={`/diagrams/${seq}.drawio`} target="_blank" rel="noreferrer"
-          style={{fontSize:11,color:'#14BEF0',textDecoration:'none'}}>
-          Open in draw.io ↗
+    <div>
+      <div style={{background:"#fafbfc",borderRadius:8,
+        border:"1px solid rgba(20,190,240,0.2)",overflow:"hidden",
+        cursor:"zoom-in"}} onClick={()=>setZoomed(true)}>
+        <img src={url} alt={seq}
+          style={{width:"100%",height:"auto",display:"block",
+            maxHeight:460,objectFit:"contain",padding:8}}/>
+        <div style={{textAlign:"right",padding:"4px 10px",
+          fontSize:10,color:"#0E94A8"}}>Click to enlarge</div>
+      </div>
+      <div style={{marginTop:6,textAlign:"right"}}>
+        <a href={url} target="_blank" rel="noreferrer"
+          style={{fontSize:11,color:"#14BEF0",textDecoration:"none"}}>
+          Open full size ↗
         </a>
       </div>
+      {zoomed&&(
+        <div onClick={()=>setZoomed(false)}
+          style={{position:"fixed",inset:0,zIndex:9998,
+            background:"rgba(35,31,32,0.88)",
+            display:"flex",alignItems:"center",justifyContent:"center",
+            padding:20,cursor:"zoom-out"}}>
+          <div onClick={e=>e.stopPropagation()}
+            style={{position:"relative",maxWidth:"95vw",maxHeight:"92vh",
+              background:"#ffffff",borderRadius:12,overflow:"hidden"}}>
+            <div style={{padding:"10px 16px",
+              borderBottom:"1px solid rgba(20,190,240,0.2)",
+              display:"flex",alignItems:"center",
+              justifyContent:"space-between",
+              background:"linear-gradient(135deg,#f0fbff,#e8f7fd)"}}>
+              <span style={{fontSize:11,fontFamily:"monospace",
+                color:"#0E94A8"}}>{seq}</span>
+              <div style={{display:"flex",alignItems:"center",gap:14}}>
+                <a href={url} target="_blank" rel="noreferrer"
+                  style={{fontSize:11,color:"#14BEF0",textDecoration:"none"}}>
+                  Open full size ↗
+                </a>
+                <button onClick={()=>setZoomed(false)}
+                  style={{background:"none",border:"none",cursor:"pointer",
+                    color:"#96898C",fontSize:20,lineHeight:1,padding:0}}>
+                  ×
+                </button>
+              </div>
+            </div>
+            <div style={{overflow:"auto",maxHeight:"calc(92vh - 46px)"}}>
+              <img src={url} alt={seq}
+                style={{display:"block",maxWidth:"90vw",height:"auto"}}/>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-/* L3 Diagram Panel — tries draw.io first, falls back to auto-generated */
+/* L3 Diagram Panel — checks for PNG/JPG, falls back to auto-generated */
 function L3DiagramPanel({ l3item, l1key }) {
-  const [mode, setMode]         = useState('diagram'); // diagram | steps
-  const [hasDrawio, setHasDrawio] = useState(null); // null=checking, true, false
+  const [mode, setMode]     = useState("diagram");
+  const [imgExt, setImgExt] = useState(null); // null=checking | "png"|"jpg" | false
 
   useEffect(() => {
-    fetch(`/diagrams/${l3item.q}.drawio`, { method: 'HEAD' })
-      .then(r => setHasDrawio(r.ok))
-      .catch(() => setHasDrawio(false));
+    let cancelled = false;
+    async function checkImage() {
+      for (const ext of ["png","PNG","jpg","JPG","jpeg"]) {
+        try {
+          const r = await fetch(`/diagrams/${l3item.q}.${ext}`,{method:"HEAD"});
+          if (r.ok && !cancelled) { setImgExt(ext); return; }
+        } catch(_) {}
+      }
+      if (!cancelled) setImgExt(false);
+    }
+    checkImage();
+    return () => { cancelled = true; };
   }, [l3item.q]);
 
-  return (
-    <div style={{background:'#ffffff',borderRadius:10,
-      border:'1px solid rgba(20,190,240,0.2)',overflow:'hidden',marginBottom:16}}>
+  const hasImg    = imgExt && imgExt !== false;
+  const checking  = imgExt === null;
 
-      {/* Panel header */}
-      <div style={{padding:'10px 16px',borderBottom:'1px solid rgba(20,190,240,0.15)',
-        display:'flex',alignItems:'center',justifyContent:'space-between',
-        background:'linear-gradient(135deg,#f0fbff,#e8f7fd)'}}>
-        <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <span style={{fontSize:10,fontWeight:500,letterSpacing:'.7px',
-            textTransform:'uppercase',color:'#14BEF0'}}>L3 Process Diagram</span>
-          {hasDrawio===true&&(
-            <span style={{fontSize:10,padding:'1px 7px',borderRadius:20,
-              background:'rgba(20,190,240,0.12)',color:'#0E94A8',border:'1px solid rgba(14,148,168,0.3)'}}>
-              draw.io
-            </span>
+  return (
+    <div style={{background:"#ffffff",borderRadius:10,
+      border:"1px solid rgba(20,190,240,0.2)",
+      overflow:"hidden",marginBottom:16}}>
+
+      {/* Header */}
+      <div style={{padding:"10px 16px",
+        borderBottom:"1px solid rgba(20,190,240,0.15)",
+        display:"flex",alignItems:"center",
+        justifyContent:"space-between",
+        background:"linear-gradient(135deg,#f0fbff,#e8f7fd)"}}>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
+          <span style={{fontSize:10,fontWeight:500,letterSpacing:".7px",
+            textTransform:"uppercase",color:"#14BEF0"}}>
+            L3 Process Diagram
+          </span>
+          {checking&&<span style={{fontSize:10,color:"#96898C"}}>…</span>}
+          {hasImg&&(
+            <span style={{fontSize:10,padding:"1px 7px",borderRadius:20,
+              background:"rgba(14,148,168,0.1)",color:"#0E94A8",
+              border:"1px solid rgba(14,148,168,0.3)"}}>process map</span>
           )}
-          {hasDrawio===false&&(
-            <span style={{fontSize:10,padding:'1px 7px',borderRadius:20,
-              background:'rgba(150,137,140,0.1)',color:'#96898C',border:'1px solid rgba(150,137,140,0.25)'}}>
-              auto-generated
-            </span>
+          {imgExt===false&&(
+            <span style={{fontSize:10,padding:"1px 7px",borderRadius:20,
+              background:"rgba(150,137,140,0.1)",color:"#96898C",
+              border:"1px solid rgba(150,137,140,0.25)"}}>auto-generated</span>
           )}
         </div>
-        {/* View toggle */}
-        <div style={{display:'flex',gap:1,background:'rgba(20,190,240,0.08)',
-          borderRadius:20,padding:2}}>
-          {['diagram','steps'].map(m=>(
+        {/* Toggle */}
+        <div style={{display:"flex",gap:1,
+          background:"rgba(20,190,240,0.08)",borderRadius:20,padding:2}}>
+          {["diagram","scenarios"].map(m=>(
             <button key={m} onClick={()=>setMode(m)}
-              style={{fontSize:11,padding:'3px 12px',borderRadius:18,
-                cursor:'pointer',fontFamily:'inherit',fontWeight:mode===m?500:400,
-                border:'none',transition:'all .15s',
-                background:mode===m?'#14BEF0':'transparent',
-                color:mode===m?'white':'#5a5255'}}>
-              {m==='diagram'?'Diagram':'Scenarios'}
+              style={{fontSize:11,padding:"3px 12px",borderRadius:18,
+                cursor:"pointer",fontFamily:"inherit",
+                border:"none",transition:"all .15s",
+                fontWeight:mode===m?500:400,
+                background:mode===m?"#14BEF0":"transparent",
+                color:mode===m?"white":"#5a5255"}}>
+              {m==="diagram"?"Diagram":"Scenarios"}
             </button>
           ))}
         </div>
       </div>
 
       {/* Content */}
-      <div style={{padding:'16px'}}>
-        {mode==='diagram'&&(
-          hasDrawio===true
-            ? <DrawioViewer seq={l3item.q}/>
-            : <AutoDiagram l3item={l3item} l1key={l1key}/>
+      <div style={{padding:"16px",minHeight:80}}>
+        {mode==="diagram"&&(
+          checking
+            ? <div style={{textAlign:"center",color:"#96898C",
+                fontSize:13,padding:"20px 0"}}>Checking for process map…</div>
+            : hasImg
+              ? <ImageViewer seq={l3item.q} ext={imgExt}/>
+              : <AutoDiagram l3item={l3item} l1key={l1key}/>
         )}
-        {mode==='steps'&&(
+        {mode==="scenarios"&&(
           <ScenarioStepsList l3item={l3item} l1key={l1key}/>
         )}
       </div>
