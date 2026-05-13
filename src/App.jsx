@@ -443,6 +443,406 @@ function ScenarioSection({item, onSelect, selected}){
   );
 }
 
+
+/* ── L3 DIAGRAM COMPONENTS ───────────────────────────────────────────────── */
+
+/* Product colour mapping for diagram nodes */
+const PROD_COLORS = {
+  'Finance':                    {fill:'#e8f0fd',stroke:'#1377F0',text:'#1377F0'},
+  'Business Central':           {fill:'#dff4f7',stroke:'#0E94A8',text:'#0E94A8'},
+  'Supply Chain Management':    {fill:'#e8f7fd',stroke:'#14BEF0',text:'#0a7fa8'},
+  'Field Service':              {fill:'#fdf0e8',stroke:'#F16320',text:'#c44d10'},
+  'Project Operations':         {fill:'#f0f4ff',stroke:'#4361ee',text:'#2d47c7'},
+  'Sales':                      {fill:'#fdf0e8',stroke:'#F16320',text:'#c44d10'},
+  'Customer Service':           {fill:'#fff0f5',stroke:'#d4537e',text:'#993556'},
+  'Human Resources':            {fill:'#f5f0fd',stroke:'#7c3aed',text:'#5b21b6'},
+  'Commerce':                   {fill:'#fef9e8',stroke:'#d97706',text:'#92400e'},
+  'Microsoft 365':              {fill:'#e8f5e9',stroke:'#16a34a',text:'#166534'},
+  'default':                    {fill:'#f4f5f7',stroke:'#96898C',text:'#3d3738'},
+};
+
+function getProdColor(products) {
+  if (!products) return PROD_COLORS.default;
+  const first = products.split(';')[0].trim();
+  return PROD_COLORS[first] || PROD_COLORS.default;
+}
+
+/* Auto-generate a horizontal flow diagram from L3 data */
+function AutoDiagram({ l3item, l1key }) {
+  const all = PER_L1[l1key] || [];
+  const pfx = l3item.q.split('.').slice(0, 3).join('.') + '.';
+
+  const scenarios = useMemo(() =>
+    all.filter(x => x.l === 4 && x.q.startsWith(pfx)),
+  [l3item.q, l1key]);
+
+  const sysprocs = useMemo(() =>
+    scenarios.map(s => ({
+      seq: s.q,
+      steps: (SP_INDEX[l1key] || {})[s.q] || [],
+    })),
+  [scenarios, l1key]);
+
+  if (!scenarios.length) return (
+    <div style={{padding:'24px',textAlign:'center',color:'#96898C',fontSize:13,
+      fontStyle:'italic'}}>No scenario data available for auto-diagram.</div>
+  );
+
+  /* Layout constants */
+  const NODE_W    = 200;
+  const NODE_H    = 64;
+  const GAP_X     = 48;
+  const STEP_H    = 32;
+  const STEP_GAP  = 5;
+  const START_X   = 40;
+  const START_Y   = 60;
+  const ARROW_Y   = START_Y + NODE_H / 2;
+
+  const svgW = START_X + scenarios.length * (NODE_W + GAP_X) + 40;
+
+  /* Trim long titles for display */
+  function trimTitle(t, max = 34) {
+    // Strip trailing "in Dynamics 365 XXXX" / "using XXXX"
+    let s = t.replace(/\s+(in|using|with)\s+Dynamics\s+365\s+\w[\w\s]*/i, '')
+             .replace(/\s+(in|using|with)\s+Microsoft\s+\w[\w\s]*/i, '').trim();
+    return s.length > max ? s.slice(0, max - 1) + '…' : s;
+  }
+
+  function wrapText(text, maxChars = 26) {
+    const words = text.split(' ');
+    const lines = [];
+    let cur = '';
+    for (const w of words) {
+      if ((cur + ' ' + w).trim().length > maxChars && cur) {
+        lines.push(cur.trim());
+        cur = w;
+      } else {
+        cur = (cur + ' ' + w).trim();
+      }
+    }
+    if (cur) lines.push(cur.trim());
+    return lines.slice(0, 3);
+  }
+
+  /* Calculate max steps for SVG height */
+  const maxSteps = Math.max(...sysprocs.map(sp => sp.steps.length), 0);
+  const stepsAreaH = maxSteps > 0 ? maxSteps * (STEP_H + STEP_GAP) + 40 : 0;
+  const svgH = START_Y + NODE_H + 20 + stepsAreaH + 40;
+
+  return (
+    <div style={{overflowX:'auto',overflowY:'visible'}}>
+      <svg width={svgW} height={svgH} style={{minWidth:svgW,display:'block'}}>
+        <defs>
+          <marker id="dArrow" viewBox="0 0 10 10" refX="8" refY="5"
+            markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="#14BEF0"
+              strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </marker>
+          <marker id="sArrow" viewBox="0 0 10 10" refX="8" refY="5"
+            markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="#96898C"
+              strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </marker>
+        </defs>
+
+        {/* Process title */}
+        <text x={START_X} y={22} fontSize={13} fontWeight={500}
+          fill="#231F20" fontFamily="system-ui,sans-serif">{l3item.t}</text>
+        <text x={START_X} y={40} fontSize={11} fill="#96898C"
+          fontFamily="system-ui,sans-serif">{l3item.q} · auto-generated</text>
+
+        {/* Connecting arrows between scenario nodes */}
+        {scenarios.slice(0, -1).map((_, i) => {
+          const x1 = START_X + i * (NODE_W + GAP_X) + NODE_W;
+          const x2 = x1 + GAP_X;
+          return (
+            <line key={i} x1={x1+2} y1={ARROW_Y} x2={x2-4} y2={ARROW_Y}
+              stroke="#14BEF0" strokeWidth={1.5}
+              markerEnd="url(#dArrow)"/>
+          );
+        })}
+
+        {/* Scenario nodes (L4) */}
+        {scenarios.map((s, i) => {
+          const x = START_X + i * (NODE_W + GAP_X);
+          const y = START_Y;
+          const c = getProdColor(s.p);
+          const title = trimTitle(s.t);
+          const lines = wrapText(title);
+          const lineH = 16;
+          const totalTextH = lines.length * lineH;
+          const textStartY = y + (NODE_H - totalTextH) / 2 + lineH * 0.8;
+          const prod = (s.p || '').split(';')[0].trim().replace('Supply Chain Management','SCM');
+          const steps = sysprocs[i]?.steps || [];
+
+          return (
+            <g key={s.q}>
+              {/* Scenario box */}
+              <rect x={x} y={y} width={NODE_W} height={NODE_H} rx={8}
+                fill={c.fill} stroke={c.stroke} strokeWidth={1.5}/>
+              {/* Sequence ID */}
+              <text x={x+8} y={y+13} fontSize={9} fill={c.stroke}
+                fontFamily="monospace">{s.q}</text>
+              {/* Title lines */}
+              {lines.map((line, li) => (
+                <text key={li}
+                  x={x + NODE_W / 2} y={textStartY + li * lineH}
+                  fontSize={12} fontWeight={500} fill={c.text}
+                  textAnchor="middle" fontFamily="system-ui,sans-serif">
+                  {line}
+                </text>
+              ))}
+              {/* Product pill */}
+              <rect x={x + NODE_W - prod.length * 5.8 - 10} y={y + NODE_H - 16}
+                width={prod.length * 5.8 + 8} height={13} rx={6}
+                fill={c.stroke} opacity={0.15}/>
+              <text x={x + NODE_W - prod.length * 5.8 / 2 - 6}
+                y={y + NODE_H - 6} fontSize={8} fill={c.stroke}
+                textAnchor="middle" fontFamily="system-ui,sans-serif"
+                fontWeight={500}>{prod}</text>
+
+              {/* L5 system process steps below */}
+              {steps.length > 0 && (
+                <>
+                  {/* Connector line down */}
+                  <line x1={x + NODE_W/2} y1={y + NODE_H}
+                    x2={x + NODE_W/2} y2={y + NODE_H + 14}
+                    stroke="#96898C" strokeWidth={1}
+                    markerEnd="url(#sArrow)"/>
+
+                  {/* Step boxes */}
+                  {steps.map((sp, si) => {
+                    const sy = y + NODE_H + 20 + si * (STEP_H + STEP_GAP);
+                    const spTitle = sp.t.length > 28 ? sp.t.slice(0,27)+'…' : sp.t;
+                    return (
+                      <g key={sp.q}>
+                        {si > 0 && (
+                          <line x1={x + NODE_W/2}
+                            y1={sy - STEP_GAP}
+                            x2={x + NODE_W/2}
+                            y2={sy}
+                            stroke="#96898C" strokeWidth={0.8}
+                            strokeDasharray="3 2"/>
+                        )}
+                        <rect x={x+2} y={sy} width={NODE_W-4} height={STEP_H}
+                          rx={6} fill="#f7f8fa"
+                          stroke="rgba(114,216,246,0.4)" strokeWidth={1}/>
+                        <text x={x+10} y={sy+11} fontSize={8.5}
+                          fill="#96898C" fontFamily="monospace">{sp.q}</text>
+                        <text x={x + (NODE_W-4)/2 + 2} y={sy + STEP_H/2 + 4}
+                          fontSize={11} fill="#3d3738" textAnchor="middle"
+                          fontFamily="system-ui,sans-serif">{spTitle}</text>
+                      </g>
+                    );
+                  })}
+                </>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Legend */}
+        {(() => {
+          const prods = [...new Set(scenarios.map(s =>
+            (s.p || '').split(';')[0].trim()).filter(Boolean))];
+          return prods.map((p, i) => {
+            const c = getProdColor(p);
+            return (
+              <g key={p}>
+                <rect x={START_X + i * 160} y={svgH - 22}
+                  width={12} height={12} rx={3}
+                  fill={c.fill} stroke={c.stroke} strokeWidth={1.5}/>
+                <text x={START_X + i * 160 + 16} y={svgH - 12}
+                  fontSize={11} fill="#5a5255"
+                  fontFamily="system-ui,sans-serif">{p}</text>
+              </g>
+            );
+          });
+        })()}
+      </svg>
+    </div>
+  );
+}
+
+/* draw.io XML viewer */
+function DrawioViewer({ seq }) {
+  const [xml, setXml]       = useState(null);
+  const [status, setStatus] = useState('loading'); // loading | loaded | error
+  const containerId = `drawio-${seq.replace(/\./g, '-')}`;
+
+  useEffect(() => {
+    const url = `/diagrams/${seq}.drawio`;
+    fetch(url)
+      .then(r => {
+        if (!r.ok) throw new Error('not found');
+        return r.text();
+      })
+      .then(text => { setXml(text); setStatus('loaded'); })
+      .catch(() => setStatus('error'));
+  }, [seq]);
+
+  useEffect(() => {
+    if (status !== 'loaded' || !xml) return;
+    /* Load draw.io viewer library and render */
+    const existingScript = document.getElementById('drawio-script');
+    const doRender = () => {
+      const container = document.getElementById(containerId);
+      if (!container || !window.mxGraph) return;
+      container.innerHTML = '';
+      try {
+        /* Use draw.io's embedded viewer approach */
+        const div = document.createElement('div');
+        div.style.cssText = 'width:100%;height:100%;';
+        container.appendChild(div);
+        const graph = new window.mxGraph(div);
+        const doc = window.mxUtils.parseXml(xml);
+        const codec = new window.mxCodec(doc);
+        codec.decode(doc.documentElement, graph.getModel());
+        graph.fit();
+        graph.setEnabled(false);
+      } catch(e) {
+        container.innerHTML = `<div style="padding:16px;color:#96898C;font-size:13px">
+          Diagram loaded — <a href="/diagrams/${seq}.drawio" target="_blank"
+          style="color:#14BEF0">open in draw.io</a> to view interactively.</div>`;
+      }
+    };
+    if (existingScript) { doRender(); return; }
+    const script = document.createElement('script');
+    script.id = 'drawio-script';
+    script.src = 'https://cdn.jsdelivr.net/npm/mxgraph@4.2.2/javascript/mxClient.min.js';
+    script.onload = doRender;
+    document.head.appendChild(script);
+  }, [status, xml, containerId]);
+
+  if (status === 'loading') return (
+    <div style={{padding:'24px',textAlign:'center',color:'#96898C',fontSize:13}}>
+      Loading diagram…
+    </div>
+  );
+
+  if (status === 'error') return null; /* Fall through to auto-diagram */
+
+  return (
+    <div id={containerId}
+      style={{width:'100%',minHeight:320,background:'#fafbfc',
+        borderRadius:8,border:'1px solid rgba(20,190,240,0.2)',
+        overflow:'hidden',position:'relative'}}>
+      <div style={{padding:'12px 16px',borderBottom:'1px solid rgba(20,190,240,0.15)',
+        display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <span style={{fontSize:11,color:'#96898C'}}>draw.io process map</span>
+        <a href={`/diagrams/${seq}.drawio`} target="_blank" rel="noreferrer"
+          style={{fontSize:11,color:'#14BEF0',textDecoration:'none'}}>
+          Open in draw.io ↗
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/* L3 Diagram Panel — tries draw.io first, falls back to auto-generated */
+function L3DiagramPanel({ l3item, l1key }) {
+  const [mode, setMode]         = useState('diagram'); // diagram | steps
+  const [hasDrawio, setHasDrawio] = useState(null); // null=checking, true, false
+
+  useEffect(() => {
+    fetch(`/diagrams/${l3item.q}.drawio`, { method: 'HEAD' })
+      .then(r => setHasDrawio(r.ok))
+      .catch(() => setHasDrawio(false));
+  }, [l3item.q]);
+
+  return (
+    <div style={{background:'#ffffff',borderRadius:10,
+      border:'1px solid rgba(20,190,240,0.2)',overflow:'hidden',marginBottom:16}}>
+
+      {/* Panel header */}
+      <div style={{padding:'10px 16px',borderBottom:'1px solid rgba(20,190,240,0.15)',
+        display:'flex',alignItems:'center',justifyContent:'space-between',
+        background:'linear-gradient(135deg,#f0fbff,#e8f7fd)'}}>
+        <div style={{display:'flex',alignItems:'center',gap:8}}>
+          <span style={{fontSize:10,fontWeight:500,letterSpacing:'.7px',
+            textTransform:'uppercase',color:'#14BEF0'}}>L3 Process Diagram</span>
+          {hasDrawio===true&&(
+            <span style={{fontSize:10,padding:'1px 7px',borderRadius:20,
+              background:'rgba(20,190,240,0.12)',color:'#0E94A8',border:'1px solid rgba(14,148,168,0.3)'}}>
+              draw.io
+            </span>
+          )}
+          {hasDrawio===false&&(
+            <span style={{fontSize:10,padding:'1px 7px',borderRadius:20,
+              background:'rgba(150,137,140,0.1)',color:'#96898C',border:'1px solid rgba(150,137,140,0.25)'}}>
+              auto-generated
+            </span>
+          )}
+        </div>
+        {/* View toggle */}
+        <div style={{display:'flex',gap:1,background:'rgba(20,190,240,0.08)',
+          borderRadius:20,padding:2}}>
+          {['diagram','steps'].map(m=>(
+            <button key={m} onClick={()=>setMode(m)}
+              style={{fontSize:11,padding:'3px 12px',borderRadius:18,
+                cursor:'pointer',fontFamily:'inherit',fontWeight:mode===m?500:400,
+                border:'none',transition:'all .15s',
+                background:mode===m?'#14BEF0':'transparent',
+                color:mode===m?'white':'#5a5255'}}>
+              {m==='diagram'?'Diagram':'Scenarios'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div style={{padding:'16px'}}>
+        {mode==='diagram'&&(
+          hasDrawio===true
+            ? <DrawioViewer seq={l3item.q}/>
+            : <AutoDiagram l3item={l3item} l1key={l1key}/>
+        )}
+        {mode==='steps'&&(
+          <ScenarioStepsList l3item={l3item} l1key={l1key}/>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* Compact scenario list for the "Scenarios" tab in the diagram panel */
+function ScenarioStepsList({ l3item, l1key }) {
+  const all = PER_L1[l1key] || [];
+  const pfx = l3item.q.split('.').slice(0,3).join('.') + '.';
+  const scenarios = all.filter(x => x.l===4 && x.q.startsWith(pfx));
+
+  if (!scenarios.length) return (
+    <div style={{fontSize:13,color:'#96898C',fontStyle:'italic'}}>No scenarios recorded.</div>
+  );
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',gap:6}}>
+      {scenarios.map((s,i)=>{
+        const c = getProdColor(s.p);
+        const prod = (s.p||'').split(';')[0].trim();
+        return (
+          <div key={s.q} style={{display:'flex',alignItems:'flex-start',gap:10,
+            padding:'9px 12px',background:c.fill,borderRadius:8,
+            border:`1px solid ${c.stroke}33`}}>
+            <div style={{width:22,height:22,minWidth:22,borderRadius:'50%',
+              background:c.stroke,color:'white',fontSize:11,fontWeight:500,
+              display:'flex',alignItems:'center',justifyContent:'center',
+              marginTop:1}}>{i+1}</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:12,fontFamily:'monospace',
+                color:'#96898C',marginBottom:2}}>{s.q}</div>
+              <div style={{fontSize:13,color:'#231F20',lineHeight:1.4}}>{s.t}</div>
+              {prod&&<span style={{fontSize:10,color:c.text,marginTop:3,
+                display:'inline-block'}}>{prod}</span>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
 /* ── L3 ACCORDION ── */
 function L3Accordion({item,l1key,onSelect,selected,prodFilter}){
   const [open,setOpen]=useState(false);
@@ -484,6 +884,7 @@ function L3Accordion({item,l1key,onSelect,selected,prodFilter}){
           transition:"transform 0.2s",flexShrink:0,cursor:"pointer",padding:"0 2px"}}>▶</span>}
     </div>
     {open&&!dimmed&&<div style={{padding:"12px 14px 14px",borderTop:"1px solid #1e2235"}}>
+      <L3DiagramPanel l3item={item} l1key={l1key}/>
       {item.d&&<p style={{fontSize:13,color:"#231F20",lineHeight:1.65,marginBottom:12}}>{item.d}</p>}
       {scenarios.length>0
         ?<>
