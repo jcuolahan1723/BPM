@@ -1354,7 +1354,7 @@ export default function App(){
     if(v.length>=2) setView("search");
     else setView(l2q?"l2":l1idx!==null?"l1":"home");
   }
-
+ 
   return <div style={{fontFamily:"system-ui,-apple-system,sans-serif",background:"#13151f",
     color:"#e8edf4",minHeight:"100vh",display:"flex",flexDirection:"column"}}>
     <TopBar searchQ={searchQ} setSearchQ={handleSearch} onHome={goHome}/>
