@@ -780,6 +780,7 @@ function L3DiagramPanel({ l3item, l1key, famFilter }) {
             textTransform:"uppercase",color:"#14BEF0"}}>
             L3 Process Diagram
           </span>
+          <HelpTip position="bottom" text="Auto-generated flow diagram of L4 Scenarios for this process. Box colour = product. When a Family filter is active, only that family's nodes are shown. Switch to Scenarios tab for a list view."/>
           {checking&&<span style={{fontSize:10,color:"#5a6a80"}}>…</span>}
           {hasImg&&(
             <span style={{fontSize:10,padding:"1px 7px",borderRadius:20,
@@ -979,6 +980,7 @@ function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter,famFilter}){
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:11}}>
       <LBadge level={3}/>
       <span style={{fontSize:13,fontWeight:600,color:"#e8edf4"}}>Business Processes</span>
+      <HelpTip position="top" text="L3 Processes — each has a unique code, description, and scenarios. Click the title to preview details. Click ▶ to expand and view L4 Scenarios inline."/>
       <span style={{fontSize:11,color:"#8a9ab0"}}>{visibleL3s.length} · click title to preview · ▶ to expand scenarios</span>
     </div>
     {visibleL3s.length===0
@@ -1030,6 +1032,7 @@ function L1View({l1idx,onL2,onBack,onSelect,selected,prodFilter,famFilter}){
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:11}}>
       <LBadge level={2}/>
       <span style={{fontSize:13,fontWeight:600,color:"#e8edf4"}}>Process Areas</span>
+      <HelpTip position="top" text="L2 Process Areas group related processes within this EPIC. Click a card title to drill in, or click the card body to preview in the right panel."/>
       <span style={{fontSize:11,color:"#8a9ab0"}}>{visible.length}{(famFilter||prodFilter)&&visible.length<l2s.length?` of ${l2s.length}`:""} — click title to drill down</span>
     </div>
     {visible.length===0
@@ -1207,8 +1210,9 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
 
     {/* Application Family Filter */}
       <div style={{padding:"7px 12px 11px",borderBottom:"1px solid rgba(20,190,240,0.1)",flexShrink:0}}>
-      <div style={{fontSize:10,fontWeight:600,letterSpacing:"1px",color:"#6b7a90",textTransform:"uppercase",marginBottom:9}}>
+      <div style={{fontSize:10,fontWeight:600,letterSpacing:"1px",color:"#6b7a90",textTransform:"uppercase",marginBottom:9,display:"flex",alignItems:"center"}}>
         Application Family
+        <HelpTip position="right" text="Filter the entire catalogue to a specific D365 product area. Affects EPICs, Process Areas, Processes, Scenarios, and diagrams at every level."/>
       </div>
       <div style={{display:"flex",flexDirection:"column",gap:5}}>
         {APP_FAMILIES.map(fam=>{
@@ -1237,8 +1241,9 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
 
     {/* EPIC list */}
     <div style={{overflowY:"auto",flex:1,padding:"7px 0"}}>
-      <div style={{padding:"7px 12px 5px",fontSize:10,fontWeight:600,letterSpacing:"1px",color:"#6b7a90",textTransform:"uppercase"}}>
+      <div style={{padding:"7px 12px 5px",fontSize:10,fontWeight:600,letterSpacing:"1px",color:"#6b7a90",textTransform:"uppercase",display:"flex",alignItems:"center"}}>
         End-to-End Processes
+        <HelpTip position="right" text="The 15 top-level EPICs covering the full D365 process landscape. Click any EPIC to drill into its Process Areas."/>
         {famFilter&&<span style={{marginLeft:6,color:"#14BEF0",fontWeight:400}}>
           ({filteredPrefixes?.size||0}/{SUMMARY.length})
         </span>}
@@ -1262,7 +1267,257 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
 }
 
 /* ── TOP BAR ── */
-function TopBar({searchQ,setSearchQ,onHome}){
+
+/* ══════════════════════════════════════════════════════════
+   HELP SYSTEM — Tooltip + Sliding Panel
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Contextual ? tooltip ── */
+function HelpTip({text,position="top"}){
+  const [show,setShow]=useState(false);
+  const ref=useRef();
+  const [coords,setCoords]=useState({top:0,left:0});
+
+  function handleEnter(){
+    if(ref.current){
+      const r=ref.current.getBoundingClientRect();
+      const pos={};
+      if(position==="top"||position==="bottom"){
+        pos.left=r.left+r.width/2;
+        pos.top=position==="top"?r.top-8:r.bottom+8;
+      } else if(position==="left"){
+        pos.left=r.left-8;
+        pos.top=r.top+r.height/2;
+      } else {
+        pos.left=r.right+8;
+        pos.top=r.top+r.height/2;
+      }
+      setCoords(pos);
+    }
+    setShow(true);
+  }
+
+  const transformMap={
+    top:"translate(-50%,-100%)",
+    bottom:"translate(-50%,0%)",
+    left:"translate(-100%,-50%)",
+    right:"translate(0%,-50%)",
+  };
+
+  return <>
+    <span ref={ref} onMouseEnter={handleEnter} onMouseLeave={()=>setShow(false)}
+      style={{display:"inline-flex",alignItems:"center",justifyContent:"center",
+        width:14,height:14,borderRadius:"50%",background:"rgba(20,190,240,0.18)",
+        color:"#14BEF0",fontSize:9,fontWeight:700,cursor:"help",flexShrink:0,
+        border:"1px solid rgba(20,190,240,0.35)",lineHeight:1,userSelect:"none",
+        marginLeft:5,verticalAlign:"middle"}}>?</span>
+    {show&&<div style={{position:"fixed",zIndex:9999,
+      top:coords.top,left:coords.left,
+      transform:transformMap[position]||"translate(-50%,-100%)",
+      background:"#0b0c11",border:"1px solid rgba(20,190,240,0.4)",
+      borderRadius:8,padding:"8px 12px",maxWidth:260,fontSize:11,
+      color:"#e8edf4",lineHeight:1.55,pointerEvents:"none",
+      boxShadow:"0 4px 24px rgba(0,0,0,0.6)"}}>
+      <div style={{position:"absolute",width:6,height:6,background:"#0b0c11",
+        border:"1px solid rgba(20,190,240,0.4)",
+        ...(position==="top"?{bottom:-4,left:"50%",transform:"translateX(-50%) rotate(45deg)",borderTop:"none",borderLeft:"none"}:
+           position==="bottom"?{top:-4,left:"50%",transform:"translateX(-50%) rotate(45deg)",borderBottom:"none",borderRight:"none"}:
+           position==="right"?{left:-4,top:"50%",transform:"translateY(-50%) rotate(45deg)",borderRight:"none",borderTop:"none"}:
+           {right:-4,top:"50%",transform:"translateY(-50%) rotate(45deg)",borderLeft:"none",borderBottom:"none"})
+      }}/>
+      {text}
+    </div>}
+  </>;
+}
+
+/* ── Full sliding help panel ── */
+const HELP_SECTIONS=[
+  { id:"overview", icon:"📋", title:"Overview",
+    content:[
+      {type:"p",text:"The D365 Process Catalogue organises Microsoft Dynamics 365 business processes into a four-level hierarchy, helping consultants and project teams locate, understand, and communicate processes across all D365 application families."},
+    ]
+  },
+  { id:"hierarchy", icon:"🏗️", title:"Process Hierarchy",
+    content:[
+      {type:"p",text:"Every process has a unique numeric code reflecting its position in the hierarchy:"},
+      {type:"levels",items:[
+        {badge:"L1",color:"#0E94A8",label:"EPIC",example:"10.00.000.000",desc:"Top-level end-to-end process group (e.g. Inventory to deliver)"},
+        {badge:"L2",color:"#2BB8D0",label:"Process Area",example:"10.10.000.000",desc:"Logical grouping of related processes within an EPIC"},
+        {badge:"L3",color:"#F16320",label:"Process",example:"10.10.010.000",desc:"An individual business process with defined steps and outcomes"},
+        {badge:"L4",color:"#C44D10",label:"Scenario",example:"10.10.010.100",desc:"A specific execution variant tied to a product"},
+      ]},
+      {type:"tip",text:"Example: 60.30.010.000 = EPIC 60 (Inventory to deliver) → Area 60.30 (Process inbound goods) → Process 60.30.010 (Receive goods)"},
+    ]
+  },
+  { id:"filter", icon:"🔍", title:"Application Family Filter",
+    content:[
+      {type:"p",text:"The sidebar filter scopes the entire catalogue to a specific D365 product area. When active, filtering applies at every level — EPICs, Process Areas, Processes, Scenarios, and the auto-generated diagram."},
+      {type:"families",items:[
+        {name:"Finance and Operations",products:"Finance, Supply Chain Management, Field Service, Project Operations, Human Resources"},
+        {name:"Business Central",products:"Business Central"},
+        {name:"Customer Engagement",products:"Sales, Customer Service, Customer Insights, Customer Voice"},
+        {name:"Azure",products:"Azure"},
+      ]},
+      {type:"tip",text:"Click Clear Filter in the sidebar to return to the full catalogue view."},
+    ]
+  },
+  { id:"navigation", icon:"🧭", title:"Navigation",
+    content:[
+      {type:"p",text:"Navigate the catalogue by drilling down through levels:"},
+      {type:"steps",items:[
+        "Click an EPIC card on the home screen to enter the EPIC view (L1)",
+        "Click a Process Area card title to drill into the Process Area (L2)",
+        "Click any Process row title to preview details in the right panel",
+        "Click ▶ on a Process row to expand and view Scenarios inline",
+        "Use the breadcrumb trail at the top to jump back to any level",
+      ]},
+    ]
+  },
+  { id:"diagram", icon:"📊", title:"Process Diagrams",
+    content:[
+      {type:"p",text:"Expanding a Process (L3) shows an auto-generated flow diagram of its L4 Scenarios. Each box represents a scenario — colour-coded by product. Arrows show the typical execution sequence."},
+      {type:"tip",text:"Switch between Diagram and Scenarios tabs inside any expanded L3 process. When a Family filter is active, only nodes for that family's products appear in the diagram."},
+    ]
+  },
+  { id:"panel", icon:"📌", title:"Detail Panel",
+    content:[
+      {type:"p",text:"Clicking any item opens its details in the right-hand panel. The panel shows the description, counts, and — for L3 processes — tabs for Diagram, Scenarios, System Processes, and Test Cases."},
+    ]
+  },
+  { id:"search", icon:"🔎", title:"Search",
+    content:[
+      {type:"p",text:"Use the search bar (top right) to find processes across the whole catalogue by keyword or code fragment. Results are grouped by level and scoped to the active Application Family filter."},
+      {type:"tip",text:'Search "60.30" to find all processes in the Inventory to deliver → Process inbound goods area.'},
+    ]
+  },
+];
+
+function HelpPanel({open,onClose}){
+  const [activeSection,setActiveSection]=useState("overview");
+  const sectionRefs=useRef({});
+
+  function scrollTo(id){
+    setActiveSection(id);
+    sectionRefs.current[id]?.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+
+  return <>
+    {/* Backdrop */}
+    {open&&<div onClick={onClose}
+      style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:200,
+        backdropFilter:"blur(2px)"}}/>}
+
+    {/* Panel */}
+    <div style={{position:"fixed",top:0,right:0,height:"100vh",width:420,
+      background:"#0e0f14",borderLeft:"1px solid rgba(20,190,240,0.2)",
+      zIndex:201,display:"flex",flexDirection:"column",
+      transform:open?"translateX(0)":"translateX(100%)",
+      transition:"transform 0.28s cubic-bezier(0.4,0,0.2,1)",
+      boxShadow:open?"-8px 0 40px rgba(0,0,0,0.6)":"none"}}>
+
+      {/* Header */}
+      <div style={{padding:"14px 18px",borderBottom:"1px solid rgba(20,190,240,0.15)",
+        display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+        <span style={{fontSize:18}}>💡</span>
+        <div style={{flex:1}}>
+          <div style={{fontSize:14,fontWeight:700,color:"#e8edf4"}}>Help & Guide</div>
+          <div style={{fontSize:11,color:"#6b7a90"}}>D365 Process Catalogue</div>
+        </div>
+        <button onClick={onClose}
+          style={{background:"rgba(20,190,240,0.1)",border:"1px solid rgba(20,190,240,0.2)",
+            borderRadius:6,color:"#8a9ab0",cursor:"pointer",fontSize:16,
+            width:28,height:28,display:"flex",alignItems:"center",justifyContent:"center",
+            lineHeight:1,padding:0}}
+          onMouseEnter={e=>{e.currentTarget.style.background="rgba(20,190,240,0.2)";e.currentTarget.style.color="#14BEF0";}}
+          onMouseLeave={e=>{e.currentTarget.style.background="rgba(20,190,240,0.1)";e.currentTarget.style.color="#8a9ab0";}}>×</button>
+      </div>
+
+      {/* TOC */}
+      <div style={{padding:"10px 12px",borderBottom:"1px solid rgba(20,190,240,0.1)",
+        display:"flex",flexWrap:"wrap",gap:5,flexShrink:0}}>
+        {HELP_SECTIONS.map(s=>(
+          <button key={s.id} onClick={()=>scrollTo(s.id)}
+            style={{background:activeSection===s.id?"rgba(20,190,240,0.2)":"rgba(255,255,255,0.04)",
+              border:`1px solid ${activeSection===s.id?"rgba(20,190,240,0.5)":"rgba(255,255,255,0.06)"}`,
+              borderRadius:6,color:activeSection===s.id?"#14BEF0":"#8a9ab0",
+              cursor:"pointer",fontSize:10,padding:"3px 8px",fontWeight:activeSection===s.id?600:400,
+              transition:"all 0.15s"}}>
+            {s.icon} {s.title}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{flex:1,overflowY:"auto",padding:"4px 0 20px"}}>
+        {HELP_SECTIONS.map(s=>(
+          <div key={s.id} ref={el=>sectionRefs.current[s.id]=el}
+            style={{padding:"16px 18px",borderBottom:"1px solid rgba(255,255,255,0.04)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+              <span style={{fontSize:16}}>{s.icon}</span>
+              <span style={{fontSize:13,fontWeight:700,color:"#14BEF0"}}>{s.title}</span>
+            </div>
+            {s.content.map((block,bi)=>{
+              if(block.type==="p") return(
+                <p key={bi} style={{fontSize:12,color:"#8a9ab0",lineHeight:1.65,margin:"0 0 10px"}}>{block.text}</p>
+              );
+              if(block.type==="tip") return(
+                <div key={bi} style={{background:"rgba(20,190,240,0.06)",border:"1px solid rgba(20,190,240,0.2)",
+                  borderLeft:"3px solid #14BEF0",borderRadius:6,padding:"8px 10px",marginBottom:10}}>
+                  <span style={{fontSize:11,color:"#14BEF0",fontWeight:600}}>💡 Tip  </span>
+                  <span style={{fontSize:11,color:"#8a9ab0",lineHeight:1.55}}>{block.text}</span>
+                </div>
+              );
+              if(block.type==="steps") return(
+                <ol key={bi} style={{paddingLeft:18,margin:"0 0 10px"}}>
+                  {block.items.map((item,i)=>(
+                    <li key={i} style={{fontSize:12,color:"#8a9ab0",lineHeight:1.65,marginBottom:4}}>{item}</li>
+                  ))}
+                </ol>
+              );
+              if(block.type==="levels") return(
+                <div key={bi} style={{display:"flex",flexDirection:"column",gap:6,marginBottom:10}}>
+                  {block.items.map((item,i)=>(
+                    <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,
+                      background:"rgba(255,255,255,0.03)",borderRadius:6,padding:"7px 10px"}}>
+                      <span style={{background:item.color,color:"#fff",borderRadius:4,
+                        fontSize:10,fontWeight:700,padding:"2px 6px",flexShrink:0,marginTop:1}}>{item.badge}</span>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:600,color:"#e8edf4"}}>{item.label}
+                          <span style={{fontFamily:"monospace",fontSize:10,color:"#6b7a90",marginLeft:6}}>{item.example}</span>
+                        </div>
+                        <div style={{fontSize:11,color:"#6b7a90",lineHeight:1.5,marginTop:2}}>{item.desc}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+              if(block.type==="families") return(
+                <div key={bi} style={{display:"flex",flexDirection:"column",gap:5,marginBottom:10}}>
+                  {block.items.map((item,i)=>(
+                    <div key={i} style={{background:"rgba(255,255,255,0.03)",borderRadius:6,padding:"7px 10px"}}>
+                      <div style={{fontSize:12,fontWeight:600,color:"#e8edf4",marginBottom:2}}>{item.name}</div>
+                      <div style={{fontSize:11,color:"#6b7a90"}}>{item.products}</div>
+                    </div>
+                  ))}
+                </div>
+              );
+              return null;
+            })}
+          </div>
+        ))}
+      </div>
+
+      {/* Footer */}
+      <div style={{padding:"10px 18px",borderTop:"1px solid rgba(20,190,240,0.1)",
+        flexShrink:0,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <span style={{fontSize:10,color:"#6b7a90"}}>iCatalyst · D365 Process Catalogue</span>
+        <span style={{fontSize:10,color:"#6b7a90"}}>MAR 2026</span>
+      </div>
+    </div>
+  </>;
+}
+
+function TopBar({searchQ,setSearchQ,onHome,onHelp}){
   const inputRef=useRef();
   return <div style={{background:"#13151f",borderBottom:"1px solid #0e0f14",padding:"0 18px",
     height:50,display:"flex",alignItems:"center",gap:12,position:"sticky",top:0,zIndex:100,flexShrink:0}}>
@@ -1272,16 +1527,28 @@ function TopBar({searchQ,setSearchQ,onHome}){
       <span style={{fontSize:12,fontWeight:500,color:"#8a9ab0",letterSpacing:"-0.2px"}}>D365 Process Catalogue</span>
       <span style={{fontSize:10,color:"#6b7a90",marginLeft:2}}>MAR 2026</span>
     </div>
-    <div style={{marginLeft:"auto",position:"relative"}}>
-      <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:12,color:"#8a9ab0",pointerEvents:"none"}}>🔍</span>
-      <input ref={inputRef} value={searchQ} onChange={e=>setSearchQ(e.target.value)}
-        placeholder="Search all levels..."
-        style={{background:"#13151f",border:"1px solid #0e0f14",borderRadius:8,
-          padding:"5px 26px 5px 27px",color:"#e8edf4",fontSize:12,width:220,outline:"none",transition:"border-color 0.15s"}}
-        onFocus={e=>e.target.style.borderColor="#14BEF0"}
-        onBlur={e=>e.target.style.borderColor="rgba(20,190,240,0.2)"}/>
-      {searchQ&&<span onClick={()=>{setSearchQ("");inputRef.current?.focus();}}
-        style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",cursor:"pointer",color:"#8a9ab0",fontSize:15,lineHeight:1}}>×</span>}
+    <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
+      <div style={{position:"relative"}}>
+        <span style={{position:"absolute",left:9,top:"50%",transform:"translateY(-50%)",fontSize:12,color:"#8a9ab0",pointerEvents:"none"}}>🔍</span>
+        <input ref={inputRef} value={searchQ} onChange={e=>setSearchQ(e.target.value)}
+          placeholder="Search all levels..."
+          style={{background:"#13151f",border:"1px solid rgba(20,190,240,0.2)",borderRadius:8,
+            padding:"5px 26px 5px 27px",color:"#e8edf4",fontSize:12,width:220,outline:"none",transition:"border-color 0.15s"}}
+          onFocus={e=>e.target.style.borderColor="#14BEF0"}
+          onBlur={e=>e.target.style.borderColor="rgba(20,190,240,0.2)"}/>
+        {searchQ&&<span onClick={()=>{setSearchQ("");inputRef.current?.focus();}}
+          style={{position:"absolute",right:8,top:"50%",transform:"translateY(-50%)",cursor:"pointer",color:"#8a9ab0",fontSize:15,lineHeight:1}}>×</span>}
+      </div>
+      <button onClick={onHelp}
+        style={{background:"rgba(20,190,240,0.1)",border:"1px solid rgba(20,190,240,0.25)",
+          borderRadius:8,color:"#14BEF0",cursor:"pointer",fontSize:12,fontWeight:700,
+          height:30,padding:"0 12px",display:"flex",alignItems:"center",gap:5,flexShrink:0,
+          transition:"all 0.15s"}}
+        onMouseEnter={e=>{e.currentTarget.style.background="rgba(20,190,240,0.2)";}}
+        onMouseLeave={e=>{e.currentTarget.style.background="rgba(20,190,240,0.1)";}}>
+        <span style={{fontSize:13}}>?</span>
+        <span style={{fontSize:11}}>Help</span>
+      </button>
     </div>
   </div>;
 }
@@ -1343,6 +1610,7 @@ export default function App(){
   const [famFilter,setFamFilter]   = useState("");
   const [prodFilter,setProdFilter] = useState("");
   const [selected,setSelected]     = useState(null);
+  const [showHelp,setShowHelp]     = useState(false);
   const isSearching=searchQ.length>=2;
   const overviewStats=useOverviewStats(selected);
 
@@ -1354,10 +1622,10 @@ export default function App(){
     if(v.length>=2) setView("search");
     else setView(l2q?"l2":l1idx!==null?"l1":"home");
   }
- 
+
   return <div style={{fontFamily:"system-ui,-apple-system,sans-serif",background:"#13151f",
     color:"#e8edf4",minHeight:"100vh",display:"flex",flexDirection:"column"}}>
-    <TopBar searchQ={searchQ} setSearchQ={handleSearch} onHome={goHome}/>
+    <TopBar searchQ={searchQ} setSearchQ={handleSearch} onHome={goHome} onHelp={()=>setShowHelp(true)}/>
     <div style={{display:"flex",flex:1,overflow:"hidden",height:"calc(100vh - 50px)"}}>
       <Sidebar l1idx={l1idx} onL1={goL1} famFilter={famFilter} setFamFilter={setFamFilter}/>
       <div style={{flex:1,overflowY:"auto",minWidth:0}}>
@@ -1368,5 +1636,6 @@ export default function App(){
       </div>
       <OverviewPanel item={selected} stats={overviewStats} onClose={()=>setSelected(null)}/>
     </div>
+    <HelpPanel open={showHelp} onClose={()=>setShowHelp(false)}/>
   </div>;
 }
