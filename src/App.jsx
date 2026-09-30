@@ -395,7 +395,7 @@ function ScenarioSection({item, onSelect, selected}){
   [spList,prefix]);
 
   return (
-    <div style={{marginBottom:5}}>
+    <div style={{marginBottom:5}} data-code={item.q}>
       {/* L4 row */}
       <div style={{display:"flex",alignItems:"flex-start",gap:8,padding:"9px 12px",
         background:isSelected?"#1e1208":"#1a1208",borderRadius:8,cursor:"pointer",
@@ -494,6 +494,64 @@ function inFamily(item,fam){
   if(!idx.l3.includes(l3)) return false;
   if(item.l>=4&&item.p) return item.p.split(";").some(p=>FAMILY_PRODUCTS[fam].has(p.trim()));
   return true;
+}
+
+// Several families selected at once: merge their indexes under a combined key (e.g. "A + B"),
+// so everything that looks up FAM_INDEX / FAMILY_PRODUCTS by famFilter keeps working.
+const FAMILY_SEP = " + ";
+function familyKey(fams){
+  const list=[...fams].sort(); const key=list.join(FAMILY_SEP);
+  if(list.length>1&&!FAM_INDEX[key]){
+    const merge=lvl=>[...new Set(list.flatMap(f=>FAM_INDEX[f]?.[lvl]||[]))];
+    FAM_INDEX[key]={l1:merge("l1"),l2:merge("l2"),l3:merge("l3")};
+    FAMILY_PRODUCTS[key]=new Set(list.flatMap(f=>[...(FAMILY_PRODUCTS[f]||[])]));
+  }
+  return key;
+}
+const familiesOf = famFilter => famFilter?famFilter.split(FAMILY_SEP):[];
+
+// Product index derived the same way as FAM_INDEX: a process belongs to a product when any of its
+// scenarios is tagged with it (processes without scenarios use their own tags). The stored PROD_INDEX
+// used process-level tags only, which missed most Project Operations and Human Resources processes.
+const PRODUCT_INDEX = (()=>{
+  const tags=i=>(i.p||"").split(";").map(s=>s.trim()).filter(Boolean);
+  const l3Of=q=>q.split(".").slice(0,3).join(".")+".000";
+  const byProduct={}; const withScenarios=new Set();
+  const add=(prod,q)=>{
+    const s=q.split(".");
+    const e=byProduct[prod]||(byProduct[prod]={l1:new Set(),l2:new Set(),l3:new Set()});
+    e.l1.add(s[0]); e.l2.add(`${s[0]}.${s[1]}.000.000`); e.l3.add(l3Of(q));
+  };
+  const all=Object.values(PER_L1).flat();
+  for(const i of all) if(i.l===4){ withScenarios.add(l3Of(i.q)); tags(i).forEach(p=>add(p,i.q)); }
+  for(const i of all) if(i.l===3&&!withScenarios.has(i.q)) tags(i).forEach(p=>add(p,i.q));
+  const out={};
+  for(const [p,e] of Object.entries(byProduct)) out[p]={l1:[...e.l1],l2:[...e.l2],l3:[...e.l3]};
+  return out;
+})();
+
+// Does a search result belong to the selected product?
+function inProduct(item,prod){
+  if(!prod) return true;
+  const idx=PRODUCT_INDEX[prod]; if(!idx) return false;
+  if(item.l===1) return idx.l1.includes(getPrefix(item.q));
+  if(item.l===2) return idx.l2.includes(item.q);
+  if(item.l===3) return idx.l3.includes(item.q);
+  return hasProduct(item,prod);
+}
+
+/* Search: every word must match (any order); "*" matches any run of characters within a word,
+   e.g. "vend* invoice" or "60.30". */
+function searchTerms(q){
+  const esc=s=>s.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+  return q.trim().split(/\s+/).filter(t=>t.replace(/\*/g,"")).map(t=>t.split("*").map(esc).join("[^\\s]*"));
+}
+function escapeHtml(s){
+  return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function matchesSearch(item,terms){
+  const text=`${item.q} ${item.t} ${item.d||""}`;
+  return terms.every(t=>new RegExp(t,"i").test(text));
 }
 
 function AutoDiagram({ l3item, l1key, famFilter }) {
@@ -886,8 +944,11 @@ function ScenarioStepsList({ l3item, l1key }) {
 
 
 /* ── L3 ACCORDION ── */
-function L3Accordion({item,l1key,onSelect,selected,prodFilter,famFilter}){
+function L3Accordion({item,l1key,onSelect,selected,prodFilter,famFilter,focus}){
   const [open,setOpen]=useState(false);
+  // Opened from search: expand this process when the target is it or one of its scenarios.
+  const l3pfx=item.q.split(".").slice(0,3).join(".")+".";
+  useEffect(()=>{ const q=focus?.q; if(q&&(q===item.q||q.startsWith(l3pfx))) setOpen(true); },[focus]);
   const isSelected=selected?.q===item.q;
   const allowedFamProds=useMemo(()=>famFilter?FAMILY_PRODUCTS[famFilter]:null,[famFilter]);
   const allScenarios=useMemo(()=>{
@@ -906,13 +967,13 @@ function L3Accordion({item,l1key,onSelect,selected,prodFilter,famFilter}){
   },[allScenarios,prodFilter,allowedFamProds]);
   // Dim this L3 if it's not in the family's L3 list (when famFilter active)
   const dimmedByFam=famFilter&&!(FAM_INDEX[famFilter]?.l3||[]).includes(item.q);
-  const dimmedByProd=prodFilter&&!(PROD_INDEX[prodFilter]?.l3||[]).includes(item.q);
+  const dimmedByProd=prodFilter&&!(PRODUCT_INDEX[prodFilter]?.l3||[]).includes(item.q);
   const dimmed=dimmedByFam||dimmedByProd;
 
   return <div style={{background:"#13151f",
     border:`1px solid ${isSelected?"#F16320":dimmed?"#0b0c11":"rgba(20,190,240,0.2)"}`,
     borderLeft:`3px solid ${isSelected?"#F16320":dimmed?"rgba(20,190,240,0.2)":"#F16320"}`,
-    borderRadius:10,overflow:"hidden",marginBottom:7,opacity:dimmed?0.3:1,transition:"all 0.15s"}}>
+    borderRadius:10,overflow:"hidden",marginBottom:7,opacity:dimmed?0.3:1,transition:"all 0.15s"}} data-code={item.q}>
     <div style={{padding:"11px 14px",display:"flex",alignItems:"center",gap:10,
       background:open||isSelected?"#1a1d2a":"#13151f",transition:"background 0.1s"}}
       onMouseEnter={e=>{if(!dimmed)e.currentTarget.style.background="#1a1d2a"}}
@@ -957,7 +1018,7 @@ function L3Accordion({item,l1key,onSelect,selected,prodFilter,famFilter}){
 }
 
 /* ── L2 VIEW ── */
-function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter,famFilter}){
+function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter,famFilter,focus}){
   const l1=SUMMARY[l1idx]; const l1key=getPrefix(l1.q);
   const all=PER_L1[l1key]||[];
   const l2=all.find(i=>i.q===l2q);
@@ -970,7 +1031,7 @@ function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter,famFilter}){
     return {...l3,sc};
   }),[l3s]);
   const visibleL3s=useMemo(()=>l3sWithCount.filter(l3=>
-    (!prodFilter||(PROD_INDEX[prodFilter]?.l3||[]).includes(l3.q))&&
+    (!prodFilter||(PRODUCT_INDEX[prodFilter]?.l3||[]).includes(l3.q))&&
     (!allowedL3s||allowedL3s.has(l3.q))
   ),[l3sWithCount,prodFilter,allowedL3s]);
   const l4c=l3sWithCount.reduce((a,x)=>a+x.sc,0);
@@ -1005,7 +1066,7 @@ function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter,famFilter}){
     </div>
     {visibleL3s.length===0
       ?<div style={{fontSize:13,color:"#8a9ab0",fontStyle:"italic",padding:"20px 0"}}>No processes match the selected filter.</div>
-      :visibleL3s.map(l3=><L3Accordion key={l3.q} item={l3} l1key={l1key} onSelect={onSelect} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>)
+      :visibleL3s.map(l3=><L3Accordion key={l3.q} item={l3} l1key={l1key} onSelect={onSelect} selected={selected} prodFilter={prodFilter} famFilter={famFilter} focus={focus}/>)
     }
   </div>;
 }
@@ -1020,7 +1081,7 @@ function L1View({l1idx,onL2,onBack,onSelect,selected,prodFilter,famFilter}){
     const l2prefix=l2.q.split(".").slice(0,2).join(".");
     const l3c=all.filter(x=>x.l===3&&x.q.startsWith(l2prefix+".")).length;
     const l4c=all.filter(x=>x.l===4&&x.q.startsWith(l2prefix+".")).length;
-    const matchesProd=!prodFilter||(PROD_INDEX[prodFilter]?.l2||[]).includes(l2.q);
+    const matchesProd=!prodFilter||(PRODUCT_INDEX[prodFilter]?.l2||[]).includes(l2.q);
     const matchesFam=!allowedL2s||allowedL2s.has(l2.q);
     return {...l2,l3c,l4c,matchesProd,matchesFam};
   }),[l2s,prodFilter,allowedL2s]);
@@ -1067,10 +1128,10 @@ function L1View({l1idx,onL2,onBack,onSelect,selected,prodFilter,famFilter}){
 /* ── HOME VIEW ── */
 function HomeView({onL1,onSelect,selected,prodFilter,famFilter}){
   const filteredSummary=useMemo(()=>{
-    if(!famFilter) return SUMMARY.map((s,i)=>{return{...s,i,dim:false}});
-    const allowed=new Set(FAM_INDEX[famFilter]?.l1||[]);
-    return SUMMARY.map((s,i)=>{return{...s,i,dim:!allowed.has(getPrefix(s.q))}});
-  },[famFilter]);
+    const fam=famFilter?new Set(FAM_INDEX[famFilter]?.l1||[]):null;
+    const prod=prodFilter?new Set(PRODUCT_INDEX[prodFilter]?.l1||[]):null;
+    return SUMMARY.map((s,i)=>{const p=getPrefix(s.q); return{...s,i,dim:(!!fam&&!fam.has(p))||(!!prod&&!prod.has(p))}});
+  },[famFilter,prodFilter]);
   const visibleCount=filteredSummary.filter(s=>!s.dim).length;
 
   return <div style={{padding:22}}>
@@ -1106,7 +1167,7 @@ function HomeView({onL1,onSelect,selected,prodFilter,famFilter}){
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:11}}>
       <LBadge level={1}/>
       <span style={{fontSize:13,fontWeight:600,color:"#e8edf4"}}>End-to-End Processes</span>
-      <span style={{fontSize:11,color:"#8a9ab0"}}>{IS_CLIENT?`${visibleCount} · Finance and Operations`:famFilter?`${visibleCount} of ${SUMMARY.length}`:SUMMARY.length}</span>
+      <span style={{fontSize:11,color:"#8a9ab0"}}>{IS_CLIENT?`${visibleCount} · Finance and Operations${prodFilter?` · ${prodFilter}`:""}`:(famFilter||prodFilter)?`${visibleCount} of ${SUMMARY.length}`:SUMMARY.length}</span>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
       {filteredSummary.filter(l1=>!(IS_CLIENT&&l1.dim)).map(l1=><EpicCard key={l1.q} item={l1} dim={l1.dim} selected={selected} onSelect={()=>!l1.dim&&onSelect(l1)} onClick={()=>!l1.dim&&onL1(l1.i)}/>)}
@@ -1116,25 +1177,26 @@ function HomeView({onL1,onSelect,selected,prodFilter,famFilter}){
 
 /* ── SEARCH VIEW ── */
 function SearchView({q,prod,famFilter,onSelect}){
+  const terms=useMemo(()=>searchTerms(q),[q]);
   const results=useMemo(()=>{
-    if(!q&&!prod) return [];
-    const ql=q.toLowerCase(); const pl=prod.toLowerCase();
+    if(!terms.length&&!prod) return [];
     const out=[];
     for(const [key,items] of Object.entries(PER_L1)){
       for(const item of items){
-        const mq=!q||item.t.toLowerCase().includes(ql)||(item.d||"").toLowerCase().includes(ql);
-        const mp=!prod||(item.p||"").toLowerCase().includes(pl);
-        if(mq&&mp&&inFamily(item,famFilter)){ const l1=SUMMARY.find(s=>getPrefix(s.q)===key)||{t:""};
+        if(matchesSearch(item,terms)&&inProduct(item,prod)&&inFamily(item,famFilter)){
+          const l1=SUMMARY.find(s=>getPrefix(s.q)===key)||{t:""};
           out.push({...item,l1t:l1.t}); if(out.length>=120) return out; }
       }
     }
     return out;
-  },[q,prod,famFilter]);
-  function hl(text,q){
-    if(!q||!text) return text;
-    const esc=q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-    return text.replace(new RegExp(`(${esc})`,"gi"),
-      "<mark style='background:rgba(20,190,240,0.25);color:#a78bfa;border-radius:2px;padding:0 1px'>$1</mark>");
+  },[terms,prod,famFilter]);
+  function hl(text){
+    if(!text) return "";
+    if(!terms.length) return escapeHtml(text);
+    // Split on matches (odd parts), escaping every piece so data text is never parsed as markup.
+    return text.split(new RegExp(`(${terms.join("|")})`,"gi")).map((part,i)=>i%2
+      ?`<mark style='background:rgba(20,190,240,0.25);color:#a78bfa;border-radius:2px;padding:0 1px'>${escapeHtml(part)}</mark>`
+      :escapeHtml(part)).join("");
   }
   if(!q&&!prod) return <div style={{padding:"60px 22px",textAlign:"center",color:"#8a9ab0"}}>Start typing to search</div>;
   if(!results.length) return <div style={{padding:"60px 22px",textAlign:"center",color:"#8a9ab0"}}>No results found</div>;
@@ -1143,7 +1205,7 @@ function SearchView({q,prod,famFilter,onSelect}){
       {results.length}{results.length>=120?"+":""} result{results.length!==1?"s":""}
       {q?<> for <span style={{color:"#e8edf4"}}>"{q}"</span></>:null}
       {prod?<> in <span style={{color:"#e8edf4"}}>{prod}</span></>:null}
-      <span style={{color:"#e8edf4"}}> · click to preview</span>
+      <span style={{color:"#e8edf4"}}> · click to open</span>
     </div>
     {results.map(item=>(
       <div key={item.q} onClick={()=>onSelect(item)}
@@ -1154,11 +1216,11 @@ function SearchView({q,prod,famFilter,onSelect}){
         <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4}}>
           <LBadge level={item.l}/>
           <span style={{fontSize:13,fontWeight:600,color:"#e8edf4"}}
-            dangerouslySetInnerHTML={{__html:hl(item.t,q)}}/>
+            dangerouslySetInnerHTML={{__html:hl(item.t)}}/>
         </div>
         <div style={{fontSize:11,color:"#e8edf4",marginBottom:item.d?3:0}}>{item.l1t} · {item.q}</div>
         {item.d&&<div style={{fontSize:12,color:"#8a9ab0",lineHeight:1.5}}
-          dangerouslySetInnerHTML={{__html:hl(item.d.slice(0,140),q)+(item.d.length>140?"…":"")}}/>}
+          dangerouslySetInnerHTML={{__html:hl(item.d.slice(0,140))+(item.d.length>140?"…":"")}}/>}
       </div>
     ))}
   </div>;
@@ -1174,7 +1236,10 @@ function EpicCard({item,dim,selected,onSelect,onClick}){
       borderTop:`3px solid ${isSelected?"#14BEF0":dim?"rgba(20,190,240,0.2)":"#14BEF0"}`,
       borderRadius:10,padding:14,cursor:dim?"default":"pointer",transition:"all 0.13s",
       transform:hov&&!dim?"translateY(-1px)":"none"}}>
-    <div style={{fontFamily:"monospace",fontSize:10,color:"#e8edf4",marginBottom:4}}>{item.q}</div>
+    <div style={{display:"flex",justifyContent:"space-between",gap:6,marginBottom:4}}>
+      <span style={{fontFamily:"monospace",fontSize:10,color:"#e8edf4"}}>{item.q}</span>
+      <span style={{display:"flex",gap:4}}><ScopeBadge code={item.q}/></span>
+    </div>
     <div onClick={onClick} style={{fontSize:13,fontWeight:600,color:isSelected?"#14BEF0":"#e8edf4",
       marginBottom:5,lineHeight:1.35,cursor:"pointer"}}
       onMouseEnter={e=>e.currentTarget.style.textDecoration="underline"}
@@ -1197,7 +1262,10 @@ function AreaCard({item,selected,onSelect,onDrill}){
     style={{background:hov?"#0e2030":"#0e1520",border:`1px solid ${isSelected?"#0E94A8":"rgba(14,148,168,0.2)"}`,
       borderTop:"3px solid #2dd4bf",borderRadius:10,padding:14,transition:"all 0.13s",
       transform:hov?"translateY(-1px)":"none"}}>
-    <div style={{fontFamily:"monospace",fontSize:10,color:"#e8edf4",marginBottom:4}}>{item.q}</div>
+    <div style={{display:"flex",justifyContent:"space-between",gap:6,marginBottom:4}}>
+      <span style={{fontFamily:"monospace",fontSize:10,color:"#e8edf4"}}>{item.q}</span>
+      <span style={{display:"flex",gap:4}}><ScopeBadge code={item.q}/></span>
+    </div>
     <div onClick={onDrill} style={{fontSize:13,fontWeight:600,color:isSelected?"#14BEF0":"#e8edf4",
       marginBottom:5,lineHeight:1.35,cursor:"pointer"}}
       onMouseEnter={e=>e.currentTarget.style.textDecoration="underline"}
@@ -1215,8 +1283,27 @@ function AreaCard({item,selected,onSelect,onDrill}){
 }
 
 /* ── SIDEBAR ── */
-function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
-  const filteredPrefixes=useMemo(()=>famFilter?new Set(FAM_INDEX[famFilter]?.l1||[]):null,[famFilter]);
+function Sidebar({l1idx,onL1,famFilter,setFamFilter,prodFilter,setProdFilter}){
+  const filteredPrefixes=useMemo(()=>{
+    if(!famFilter&&!prodFilter) return null;
+    const fam=famFilter?new Set(FAM_INDEX[famFilter]?.l1||[]):null;
+    const prod=prodFilter?new Set(PRODUCT_INDEX[prodFilter]?.l1||[]):null;
+    return new Set(SUMMARY.map(s=>getPrefix(s.q)).filter(p=>(!fam||fam.has(p))&&(!prod||prod.has(p))));
+  },[famFilter,prodFilter]);
+  const selectedFams=familiesOf(famFilter);
+
+  // Families can be combined; the product filter lists the products of the selected families.
+  function toggleFamily(fam){
+    const next=selectedFams.includes(fam)?selectedFams.filter(f=>f!==fam):[...selectedFams,fam];
+    const key=next.length?familyKey(next):"";
+    setFamFilter(key);
+    if(prodFilter&&key&&!FAMILY_PRODUCTS[key].has(prodFilter)) setProdFilter("");
+  }
+  const productOptions=useMemo(()=>{
+    const fams=selectedFams.length?selectedFams:APP_FAMILIES;
+    return [...new Set(fams.flatMap(f=>[...(FAMILY_PRODUCTS[f]||[])]))]
+      .filter(p=>PRODUCT_INDEX[p]).sort();
+  },[famFilter]);
 
   // Family button colours
   const FAM_COLORS = {
@@ -1238,11 +1325,11 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
         background:"rgba(20,190,240,0.12)",border:"1px solid rgba(20,190,240,0.4)"}}>Finance and Operations</div>:
       <div style={{display:"flex",flexDirection:"column",gap:5}}>
         {APP_FAMILIES.map(fam=>{
-          const active=famFilter===fam;
+          const active=selectedFams.includes(fam);
           const fc=FAM_COLORS[fam]||{color:"#e8edf4",bg:"rgba(107,114,128,0.12)",border:"rgba(107,114,128,0.3)"};
           const l1count = FAM_INDEX[fam]?.l1?.length||0;
           const l3count = FAM_INDEX[fam]?.l3?.length||0;
-          return <button key={fam} onClick={()=>setFamFilter(active?"":fam)}
+          return <button key={fam} onClick={()=>toggleFamily(fam)}
             style={{display:"flex",alignItems:"center",justifyContent:"space-between",
               width:"100%",padding:"7px 10px",borderRadius:8,cursor:"pointer",fontFamily:"inherit",
               transition:"all 0.13s",textAlign:"left",
@@ -1254,11 +1341,22 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
             <span style={{fontSize:10,opacity:0.7}}>{l1count} EPICs · {l3count} procs</span>
           </button>;
         })}
-        {famFilter&&<button onClick={()=>setFamFilter("")}
+        {(famFilter||prodFilter)&&<button onClick={()=>{setFamFilter("");setProdFilter("");}}
           style={{fontSize:11,padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",
             background:"rgba(241,99,32,0.08)",color:"#F16320",border:"1px solid rgba(241,99,32,0.25)",
-            fontWeight:600,marginTop:2}}>✕ Clear filter</button>}
+            fontWeight:600,marginTop:2}}>✕ Clear filters</button>}
       </div>}
+      <div style={{fontSize:10,fontWeight:600,letterSpacing:"1px",color:"#6b7a90",textTransform:"uppercase",margin:"12px 0 7px"}}>
+        Product</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:4}}>
+        {productOptions.map(p=>{
+          const on=prodFilter===p;
+          return <button key={p} onClick={()=>setProdFilter(on?"":p)} title={`${PRODUCT_INDEX[p].l3.length} processes`}
+            style={{fontSize:10.5,padding:"3px 8px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",
+              border:`1px solid ${on?"#14BEF0":"rgba(20,190,240,0.2)"}`,background:on?"rgba(20,190,240,0.14)":"transparent",
+              color:on?"#14BEF0":"#8a9ab0",fontWeight:on?600:400}}>{p}</button>;
+        })}
+      </div>
     </div>
 
     {/* EPIC list */}
@@ -1648,19 +1746,37 @@ export default function App(){
     else setView(l2q?"l2":l1idx!==null?"l1":"home");
   }
 
+  // Open a search result in the hierarchy: its EPIC or process area, with the process expanded.
+  const [focus,setFocus] = useState(null);
+  function openItem(item){
+    const i=SUMMARY.findIndex(s=>getPrefix(s.q)===getPrefix(item.q));
+    setSearchQ(""); setSelected(item);
+    if(i<0) return;
+    if(item.l===1){ goL1(i); return; }
+    const s=item.q.split(".");
+    goL2(i,item.l===2?item.q:`${s[0]}.${s[1]}.000.000`);
+    setFocus(item.l>=3?{q:item.q}:null); // object so re-opening the same item still triggers
+  }
+  useEffect(()=>{
+    if(!focus) return;
+    const t=setTimeout(()=>document.querySelector(`[data-code="${focus.q}"]`)?.scrollIntoView({block:"center",behavior:"smooth"}),150);
+    return ()=>clearTimeout(t);
+  },[focus]);
+
   return <div style={{fontFamily:"system-ui,-apple-system,sans-serif",background:"#13151f",
     color:"#e8edf4",minHeight:"100vh",display:"flex",flexDirection:"column"}}>
     <TopBar searchQ={searchQ} setSearchQ={handleSearch} onHome={goHome} onHelp={()=>setShowHelp(true)}
       onSummary={()=>{ setSearchQ(""); setView("scope"); }} onProjects={()=>setShowProjects(true)}/>
     <div style={{display:"flex",flex:1,overflow:"hidden",height:"calc(100vh - 50px)"}}>
-      <Sidebar l1idx={l1idx} onL1={goL1} famFilter={famFilter} setFamFilter={setFamFilter}/>
+      <Sidebar l1idx={l1idx} onL1={goL1} famFilter={famFilter} setFamFilter={setFamFilter}
+        prodFilter={prodFilter} setProdFilter={setProdFilter}/>
       <div style={{flex:1,overflowY:"auto",minWidth:0}}>
-        {isSearching&&<SearchView q={searchQ} prod={prodFilter} famFilter={famFilter} onSelect={setSelected}/>}
+        {isSearching&&<SearchView q={searchQ} prod={prodFilter} famFilter={famFilter} onSelect={openItem}/>}
         {!isSearching&&view==="scope"&&<ScopeSummary summary={SUMMARY} perL1={PER_L1} famIndex={FAM_INDEX}
           famFilter={famFilter} inFamily={inFamily} onOpenL1={goL1}/>}
         {!isSearching&&view==="home"&&<HomeView onL1={goL1} onSelect={setSelected} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>}
         {!isSearching&&view==="l1"&&l1idx!==null&&<L1View l1idx={l1idx} onL2={goL2} onBack={goHome} onSelect={setSelected} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>}
-        {!isSearching&&view==="l2"&&l1idx!==null&&l2q&&<L2View l1idx={l1idx} l2q={l2q} onBack={goHome} onL1={goL1} onSelect={setSelected} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>}
+        {!isSearching&&view==="l2"&&l1idx!==null&&l2q&&<L2View l1idx={l1idx} l2q={l2q} onBack={goHome} onL1={goL1} onSelect={setSelected} selected={selected} prodFilter={prodFilter} famFilter={famFilter} focus={focus}/>}
       </div>
       <OverviewPanel item={selected} stats={overviewStats} onClose={()=>setSelected(null)}/>
     </div>

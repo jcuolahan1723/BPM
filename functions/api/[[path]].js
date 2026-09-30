@@ -1,7 +1,7 @@
 // Scoping API for client projects (Cloudflare Pages Function, D1 bound as env.DB).
 //
 //   GET  /api/projects                 list projects            (iCatalyst key)
-//   POST /api/projects {name}          create a project         (iCatalyst key)
+//   POST /api/projects {name, copyFrom?}  create a project, optionally copying another's decisions (iCatalyst key)
 //   GET  /api/projects/:slug           project + its decisions  (anyone with the link)
 //   PUT  /api/projects/:slug/items/:code  save one item's fields
 //
@@ -75,8 +75,21 @@ export async function onRequest({ request, env, params }) {
         const body = await request.json().catch(() => ({}));
         const name = String(body.name || "").trim().slice(0, 100);
         if (!name) return json({ error: "Project name is required" }, 400);
+        // Optional copyFrom: start from another project's decisions (all fields, including fit/gap).
+        let source = null;
+        if (body.copyFrom) {
+          source = await getProject(env, String(body.copyFrom));
+          if (!source) return json({ error: "Project to copy not found" }, 404);
+        }
         const slug = makeSlug(name);
-        await env.DB.prepare("INSERT INTO projects (slug, name) VALUES (?, ?)").bind(slug, name).run();
+        const created = await env.DB.prepare("INSERT INTO projects (slug, name) VALUES (?, ?) RETURNING id")
+          .bind(slug, name).first();
+        if (source) {
+          await env.DB.prepare(
+            `INSERT INTO items (project_id, code, scope, priority, owner, notes, fit, fit_notes, updated_at)
+             SELECT ?, code, scope, priority, owner, notes, fit, fit_notes, CURRENT_TIMESTAMP FROM items WHERE project_id = ?`
+          ).bind(created.id, source.id).run();
+        }
         return json({ project: { slug, name } }, 201);
       }
       return json({ error: "Method not allowed" }, 405);

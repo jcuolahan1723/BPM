@@ -3,3 +3,4 @@ dist
 .wrangler
 diagrams-pending
 .dev.vars
+*.xlsx

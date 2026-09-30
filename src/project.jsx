@@ -60,7 +60,7 @@ async function api(path,{method="GET",body}={}){
   return data;
 }
 export const listProjects  = () => api("projects");
-export const createProject = name => api("projects",{method:"POST",body:{name}});
+export const createProject = (name,copyFrom) => api("projects",{method:"POST",body:{name,copyFrom}});
 
 /* ── Project context ── */
 const ProjectCtx=createContext(null);
@@ -102,12 +102,27 @@ export function ProjectProvider({children}){
   return <ProjectCtx.Provider value={value}>{children}</ProjectCtx.Provider>;
 }
 
-/* Effective decision for a code: L4 scenarios inherit scope from their L3 process. */
+/* Ancestors of a code, nearest first: scenario → process → process area → end-to-end. */
+function ancestors(code){
+  const s=code.split(".");
+  return [...new Set([l3Of(code),`${s[0]}.${s[1]}.000.000`,`${s[0]}.00.000.000`])].filter(c=>isAncestor(c,code));
+}
+function isAncestor(a,code){
+  const [a0,a1,a2]=a.split("."), [c0,c1,c2]=code.split(".");
+  if(a===code||a0!==c0) return false;
+  if(a1==="00") return true;                        // end-to-end (L1)
+  if(a1!==c1) return false;
+  if(a2==="000") return code.split(".")[2]!=="000"; // process area (L2) over processes/scenarios
+  return a2===c2&&a===l3Of(code);                   // process (L3) over its scenarios
+}
+const LEVEL_NAMES={1:"end-to-end process",2:"process area",3:"process"};
+const levelOf=code=>{ const s=code.split("."); return s[1]==="00"?1:s[2]==="000"?2:s.length===4&&s[3]==="000"?3:4; };
+
+/* Effective decision for a code: the nearest decision up the hierarchy applies unless overridden. */
 export function effectiveScope(items,code){
   const own=items[code]?.scope;
   if(own) return {scope:own,inherited:false};
-  const parent=l3Of(code);
-  if(parent!==code&&items[parent]?.scope) return {scope:items[parent].scope,inherited:true};
+  for(const a of ancestors(code)) if(items[a]?.scope) return {scope:items[a].scope,inherited:true,from:LEVEL_NAMES[levelOf(a)]};
   return {scope:"",inherited:false};
 }
 
@@ -124,11 +139,11 @@ function Pill({text,color,bg,faded,title}){
 export function ScopeBadge({code}){
   const p=useProject();
   if(!p?.active) return null;
-  const {scope,inherited}=effectiveScope(p.items,code);
+  const {scope,inherited,from}=effectiveScope(p.items,code);
   const fit=FIT_BY[p.items[code]?.fit];
   const s=SCOPE_BY[scope];
   return <>
-    {s&&<Pill text={s.label} color={s.color} bg={s.bg} faded={inherited} title={inherited?"Inherited from the process":undefined}/>}
+    {s&&<Pill text={s.label} color={s.color} bg={s.bg} faded={inherited} title={inherited?`Inherited from the ${from}`:undefined}/>}
     {fit&&<Pill text={fit.label} color={fit.color} bg={fit.bg} title="iCatalyst fit/gap assessment"/>}
   </>;
 }
@@ -159,9 +174,10 @@ function BlurField({value,onSave,multiline,placeholder,maxLength}){
 
 export function ScopeEditor({item}){
   const p=useProject();
-  if(!p?.active||(item.l!==3&&item.l!==4)) return null;
+  const level=item.l??levelOf(item.q); // home-screen EPIC cards carry no level field
+  if(!p?.active||!(level>=1&&level<=4)) return null;
   const rec=p.items[item.q]||{};
-  const {scope,inherited}=effectiveScope(p.items,item.q);
+  const {scope,inherited,from}=effectiveScope(p.items,item.q);
   const set=f=>p.save(item.q,f);
   const fit=FIT_BY[rec.fit];
 
@@ -174,7 +190,9 @@ export function ScopeEditor({item}){
     <div style={label}>Scope</div>
     <Segmented options={SCOPES} value={rec.scope||""} onChange={v=>set({scope:v})}/>
     {inherited&&<div style={{fontSize:10,color:"#6b7a90",marginTop:5}}>
-      Following the process: {SCOPE_BY[scope].label.toLowerCase()}. Choose an option to override for this scenario.</div>}
+      Following the {from}: {SCOPE_BY[scope].label.toLowerCase()}. Choose an option to override it here.</div>}
+    {level<=2&&<div style={{fontSize:10,color:"#6b7a90",marginTop:5}}>
+      Applies to everything beneath this {LEVEL_NAMES[level]} unless set lower down.</div>}
 
     <div style={{...label,marginTop:12}}>Priority</div>
     <select value={rec.priority||""} onChange={e=>set({priority:e.target.value})} style={inputStyle}>
@@ -249,14 +267,15 @@ export function ScopeSummary({summary,perL1,famIndex,famFilter,inFamily,onOpenL1
 
   if(!p?.active) return null;
   const items=p.items;
+  // Hierarchy above a code (the code itself counts at its own level, nothing below it).
   const parentsOf=code=>{
-    const s=code.split(".");
-    return {l1:byCode[`${s[0]}.00.000.000`],l2:byCode[`${s[0]}.${s[1]}.000.000`],l3:byCode[l3Of(code)]};
+    const s=code.split("."), lvl=levelOf(code);
+    return {l1:byCode[`${s[0]}.00.000.000`],l2:lvl>=2?byCode[`${s[0]}.${s[1]}.000.000`]:undefined,l3:lvl>=3?byCode[l3Of(code)]:undefined};
   };
 
   const rows=summary.map((l1,i)=>{
     const mine=l3s.filter(x=>x.q.startsWith(l1.q.split(".")[0]+"."));
-    const count=v=>mine.filter(x=>(items[x.q]?.scope||"")===v).length;
+    const count=v=>mine.filter(x=>effectiveScope(items,x.q).scope===v).length;
     return {l1,i,total:mine.length,in:count("in"),later:count("later"),out:count("out"),open:count("")};
   }).filter(r=>r.total>0);
   const tot=rows.reduce((a,r)=>({total:a.total+r.total,in:a.in+r.in,later:a.later+r.later,out:a.out+r.out,open:a.open+r.open}),
@@ -279,10 +298,10 @@ export function ScopeSummary({summary,perL1,famIndex,famFilter,inFamily,onOpenL1
   // Azure DevOps CSV import (tree format): Epic = L1, Feature = L2, User Story = in-scope L3.
   function exportAdo(){
     const out=[["ID","Work Item Type","Title 1","Title 2","Title 3","Priority","Tags","Description"]];
-    const inL3=l3s.filter(x=>items[x.q]?.scope==="in").sort((a,b)=>a.q.localeCompare(b.q));
+    const inL3=l3s.filter(x=>effectiveScope(items,x.q).scope==="in").sort((a,b)=>a.q.localeCompare(b.q));
     let lastL1="",lastL2="";
     for(const l3 of inL3){
-      const par=parentsOf(l3.q), r=items[l3.q];
+      const par=parentsOf(l3.q), r=items[l3.q]||{};
       if(par.l1&&par.l1.q!==lastL1){ out.push(["","Epic",`${par.l1.q} ${par.l1.t}`,"","","","",par.l1.d||""]); lastL1=par.l1.q; lastL2=""; }
       if(par.l2&&par.l2.q!==lastL2){ out.push(["","Feature","",`${par.l2.q} ${par.l2.t}`,"","","",par.l2.d||""]); lastL2=par.l2.q; }
       const pfx=l3.q.split(".").slice(0,3).join(".")+".";
@@ -376,6 +395,11 @@ export function ProjectsPanel({open,onClose}){
     if(!name.trim()) return;
     try{ await createProject(name.trim()); setName(""); load(); }catch(e){ setError(e.message); }
   }
+  async function duplicate(pr){
+    const newName=window.prompt(`New client name (starts with a copy of "${pr.name}" decisions):`,"");
+    if(!newName?.trim()) return;
+    try{ await createProject(newName.trim(),pr.slug); load(); }catch(e){ setError(e.message); }
+  }
   function copy(slug){
     navigator.clipboard?.writeText(linkFor(slug)).then(()=>{ setCopied(slug); setTimeout(()=>setCopied(""),1500); });
   }
@@ -416,6 +440,7 @@ export function ProjectsPanel({open,onClose}){
           <div style={{display:"flex",gap:6}}>
             <a href={linkFor(pr.slug)} style={{...btn,textDecoration:"none"}}>Open</a>
             <button style={btn} onClick={()=>copy(pr.slug)}>{copied===pr.slug?"Copied":"Copy client link"}</button>
+            <button style={btn} onClick={()=>duplicate(pr)}>Duplicate</button>
           </div>
         </div>)}
       </>}
