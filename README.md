@@ -19,3 +19,9 @@ Put a diagram in `public/diagrams/`, named with the process's L3 code, for examp
 The app shows one diagram per L3 process.
 
 > Previously hosted on Azure Static Web Apps; moved to Cloudflare Pages in September 2026.
+
+## Client and iCatalyst views
+
+The site opens in the **client view**: Finance and Operations only, with other application families hidden.
+iCatalyst staff can open `?view=icatalyst` once to see every family (the browser remembers it); `?view=client` switches back.
+This switch is a convenience, not access control.

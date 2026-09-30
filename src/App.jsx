@@ -477,6 +477,33 @@ const FAMILY_PRODUCTS = {
   'Azure':                  new Set(['Azure']),
 };
 
+/* Edition: clients get an F&O-only view; iCatalyst staff use ?view=icatalyst (remembered per browser).
+   This is a convenience switch, not access control. */
+const CLIENT_FAMILY = 'Finance and Operations';
+function getEdition(){
+  let ed="client";
+  try{
+    const v=new URLSearchParams(window.location.search).get("view");
+    if(v==="icatalyst"||v==="client") localStorage.setItem("catalogue.view",v);
+    ed=localStorage.getItem("catalogue.view")||"client";
+  }catch(_){}
+  return ed==="icatalyst"?"vendor":"client";
+}
+const EDITION = getEdition();
+const IS_CLIENT = EDITION==="client";
+
+// Does a search result belong to the selected application family?
+function inFamily(item,fam){
+  if(!fam) return true;
+  const idx=FAM_INDEX[fam]; if(!idx) return true;
+  if(item.l===1) return idx.l1.includes(getPrefix(item.q));
+  if(item.l===2) return idx.l2.includes(item.q);
+  const l3=item.q.split(".").slice(0,3).join(".")+".000";
+  if(!idx.l3.includes(l3)) return false;
+  if(item.l>=4&&item.p) return item.p.split(";").some(p=>FAMILY_PRODUCTS[fam].has(p.trim()));
+  return true;
+}
+
 function AutoDiagram({ l3item, l1key, famFilter }) {
   const all = PER_L1[l1key] || [];
   const pfx = l3item.q.split('.').slice(0, 3).join('.') + '.';
@@ -1086,16 +1113,16 @@ function HomeView({onL1,onSelect,selected,prodFilter,famFilter}){
     <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:11}}>
       <LBadge level={1}/>
       <span style={{fontSize:13,fontWeight:600,color:"#e8edf4"}}>End-to-End Processes</span>
-      <span style={{fontSize:11,color:"#8a9ab0"}}>{famFilter?`${visibleCount} of ${SUMMARY.length}`:SUMMARY.length}</span>
+      <span style={{fontSize:11,color:"#8a9ab0"}}>{IS_CLIENT?`${visibleCount} · Finance and Operations`:famFilter?`${visibleCount} of ${SUMMARY.length}`:SUMMARY.length}</span>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
-      {filteredSummary.map(l1=><EpicCard key={l1.q} item={l1} dim={l1.dim} selected={selected} onSelect={()=>!l1.dim&&onSelect(l1)} onClick={()=>!l1.dim&&onL1(l1.i)}/>)}
+      {filteredSummary.filter(l1=>!(IS_CLIENT&&l1.dim)).map(l1=><EpicCard key={l1.q} item={l1} dim={l1.dim} selected={selected} onSelect={()=>!l1.dim&&onSelect(l1)} onClick={()=>!l1.dim&&onL1(l1.i)}/>)}
     </div>
   </div>;
 }
 
 /* ── SEARCH VIEW ── */
-function SearchView({q,prod,onSelect}){
+function SearchView({q,prod,famFilter,onSelect}){
   const results=useMemo(()=>{
     if(!q&&!prod) return [];
     const ql=q.toLowerCase(); const pl=prod.toLowerCase();
@@ -1104,12 +1131,12 @@ function SearchView({q,prod,onSelect}){
       for(const item of items){
         const mq=!q||item.t.toLowerCase().includes(ql)||(item.d||"").toLowerCase().includes(ql);
         const mp=!prod||(item.p||"").toLowerCase().includes(pl);
-        if(mq&&mp){ const l1=SUMMARY.find(s=>getPrefix(s.q)===key)||{t:""};
+        if(mq&&mp&&inFamily(item,famFilter)){ const l1=SUMMARY.find(s=>getPrefix(s.q)===key)||{t:""};
           out.push({...item,l1t:l1.t}); if(out.length>=120) return out; }
       }
     }
     return out;
-  },[q,prod]);
+  },[q,prod,famFilter]);
   function hl(text,q){
     if(!q||!text) return text;
     const esc=q.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
@@ -1214,6 +1241,8 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
         Application Family
         <HelpTip position="right" text="Filter the entire catalogue to a specific D365 product area. Affects EPICs, Process Areas, Processes, Scenarios, and diagrams at every level."/>
       </div>
+      {IS_CLIENT?<div style={{fontSize:12,fontWeight:600,color:"#14BEF0",padding:"7px 10px",borderRadius:8,
+        background:"rgba(20,190,240,0.12)",border:"1px solid rgba(20,190,240,0.4)"}}>Finance and Operations</div>:
       <div style={{display:"flex",flexDirection:"column",gap:5}}>
         {APP_FAMILIES.map(fam=>{
           const active=famFilter===fam;
@@ -1236,7 +1265,7 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
           style={{fontSize:11,padding:"4px 10px",borderRadius:20,cursor:"pointer",fontFamily:"inherit",
             background:"rgba(241,99,32,0.08)",color:"#F16320",border:"1px solid rgba(241,99,32,0.25)",
             fontWeight:600,marginTop:2}}>✕ Clear filter</button>}
-      </div>
+      </div>}
     </div>
 
     {/* EPIC list */}
@@ -1244,13 +1273,14 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter}){
       <div style={{padding:"7px 12px 5px",fontSize:10,fontWeight:600,letterSpacing:"1px",color:"#6b7a90",textTransform:"uppercase",display:"flex",alignItems:"center"}}>
         End-to-End Processes
         <HelpTip position="right" text="The 15 top-level EPICs covering the full D365 process landscape. Click any EPIC to drill into its Process Areas."/>
-        {famFilter&&<span style={{marginLeft:6,color:"#14BEF0",fontWeight:400}}>
+        {famFilter&&!IS_CLIENT&&<span style={{marginLeft:6,color:"#14BEF0",fontWeight:400}}>
           ({filteredPrefixes?.size||0}/{SUMMARY.length})
         </span>}
       </div>
       {SUMMARY.map((l1,i)=>{
         const active=l1idx===i; const prefix=getPrefix(l1.q);
         const dim=!!filteredPrefixes&&!filteredPrefixes.has(prefix);
+        if(IS_CLIENT&&dim) return null;
         return <div key={l1.q} onClick={()=>!dim&&onL1(i)}
           style={{display:"flex",alignItems:"center",gap:7,padding:"7px 12px",cursor:dim?"default":"pointer",
             borderLeft:`3px solid ${active?"#14BEF0":"transparent"}`,
@@ -1607,7 +1637,7 @@ export default function App(){
   const [l1idx,setL1idx]           = useState(null);
   const [l2q,setL2q]               = useState(null);
   const [searchQ,setSearchQ]       = useState("");
-  const [famFilter,setFamFilter]   = useState("");
+  const [famFilter,setFamFilter]   = useState(IS_CLIENT?CLIENT_FAMILY:"");
   const [prodFilter,setProdFilter] = useState("");
   const [selected,setSelected]     = useState(null);
   const [showHelp,setShowHelp]     = useState(false);
@@ -1629,7 +1659,7 @@ export default function App(){
     <div style={{display:"flex",flex:1,overflow:"hidden",height:"calc(100vh - 50px)"}}>
       <Sidebar l1idx={l1idx} onL1={goL1} famFilter={famFilter} setFamFilter={setFamFilter}/>
       <div style={{flex:1,overflowY:"auto",minWidth:0}}>
-        {isSearching&&<SearchView q={searchQ} prod={prodFilter} onSelect={setSelected}/>}
+        {isSearching&&<SearchView q={searchQ} prod={prodFilter} famFilter={famFilter} onSelect={setSelected}/>}
         {!isSearching&&view==="home"&&<HomeView onL1={goL1} onSelect={setSelected} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>}
         {!isSearching&&view==="l1"&&l1idx!==null&&<L1View l1idx={l1idx} onL2={goL2} onBack={goHome} onSelect={setSelected} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>}
         {!isSearching&&view==="l2"&&l1idx!==null&&l2q&&<L2View l1idx={l1idx} l2q={l2q} onBack={goHome} onL1={goL1} onSelect={setSelected} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>}
