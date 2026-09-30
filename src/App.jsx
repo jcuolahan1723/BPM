@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from "react";
-import { IS_CLIENT, useProject, ScopeBadge, ScopeEditor, ProjectBar, ScopeSummary, ProjectsPanel } from "./project.jsx";
+import { IS_CLIENT, useProject, ScopeBadge, ScopeEditor, ProjectBar, ScopeSummary, ProjectsPanel,
+  CustomBadge, AddNodeButton, CustomNodePanel } from "./project.jsx";
 import { SUMMARY, PER_L1, SP_INDEX, TC_INDEX, FAM_INDEX, TOTALS, APP_FAMILIES, CATALOGUE_INFO } from "./catalogue-data.js";
 
 
@@ -120,7 +121,7 @@ function Breadcrumb({items}){
 }
 
 /* ── OVERVIEW PANEL ── */
-function OverviewPanel({item,stats,onClose}){
+function OverviewPanel({item,stats,onClose,famFilter}){
   if(!item) return (
     <div style={{width:290,minWidth:290,background:"#13151f",borderLeft:"1px solid #0e0f14",
       display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
@@ -150,6 +151,7 @@ function OverviewPanel({item,stats,onClose}){
         <div style={{fontSize:13,fontWeight:700,color:"#e8edf4",lineHeight:1.4}}>{item.t}</div>
       </div>
       <div style={{padding:"14px",flex:1}}>
+        {item.custom&&<CustomNodePanel key={"n"+item.q} item={item} productOptions={familyProductOptions(famFilter)} onDeleted={onClose}/>}
         <ScopeEditor key={item.q} item={item}/>
         {item.d
           ?<p style={{fontSize:12,color:"#e8edf4",lineHeight:1.75,margin:"0 0 14px 0"}}>{item.d}</p>
@@ -424,7 +426,8 @@ function ScenarioSection({item, onSelect, selected}){
           <div style={{display:"flex",flexWrap:"wrap",gap:5,alignItems:"center"}}>
             {prods.map(p=><span key={p} style={{fontSize:10,color:"#8a9ab0"}}>{p}</span>)}
             {prods.length>0&&<span style={{fontSize:10,color:"#e8edf4"}}>·</span>}
-            {!projectFit&&<Chip text={fi.label} color={fi.color} bg={fi.bg}/>}
+            {!projectFit&&!item.custom&&<Chip text={fi.label} color={fi.color} bg={fi.bg}/>}
+            <CustomBadge item={item}/>
             <ScopeBadge code={item.q}/>
           </div>
         </div>
@@ -500,7 +503,7 @@ const CLIENT_FAMILY = 'Finance and Operations';
 
 // Does a search result belong to the selected application family?
 function inFamily(item,fam){
-  if(!fam) return true;
+  if(!fam||item.custom) return true;
   const idx=FAM_INDEX[fam]; if(!idx) return true;
   if(item.l===1) return idx.l1.includes(getPrefix(item.q));
   if(item.l===2) return idx.l2.includes(item.q);
@@ -544,6 +547,41 @@ const PRODUCT_INDEX = (()=>{
   return out;
 })();
 
+/* Custom processes (level 3) and scenarios (level 4) from the open project — the iCatalyst library
+   plus the client's own — are merged into the catalogue data in place, so every view, filter and
+   search sees them. Re-running replaces the previous merge. */
+const BASE_SUMMARY_COUNTS = SUMMARY.map(s=>({l3:s.l3,l4:s.l4}));
+let mergedCodes = new Set();
+function applyCustomNodes(nodes){
+  const strip=a=>a.filter(c=>!mergedCodes.has(c));
+  for(const k of Object.keys(PER_L1)) PER_L1[k]=PER_L1[k].filter(i=>!i.custom);
+  for(const idx of [...Object.values(FAM_INDEX),...Object.values(PRODUCT_INDEX)]) idx.l3=strip(idx.l3);
+  for(const key of Object.keys(FAM_INDEX)) if(key.includes(FAMILY_SEP)){ delete FAM_INDEX[key]; delete FAMILY_PRODUCTS[key]; }
+  SUMMARY.forEach((s,i)=>Object.assign(s,BASE_SUMMARY_COUNTS[i]));
+  mergedCodes=new Set();
+
+  for(const n of nodes){
+    const k=getPrefix(n.code), s=n.code.split(".");
+    if(!PER_L1[k]) continue;
+    PER_L1[k].push({q:n.code,t:n.title,l:n.level,d:n.description,p:n.products,custom:n.source,sp:0,tc:0});
+    mergedCodes.add(n.code);
+    const sum=SUMMARY.find(x=>getPrefix(x.q)===k); if(sum) sum[n.level===3?"l3":"l4"]++;
+    if(n.level!==3) continue;
+    const area=`${s[0]}.${s[1]}.000.000`;
+    // A custom process shows under every family its process area belongs to, and under its products.
+    for(const idx of Object.values(FAM_INDEX)) if(idx.l2.includes(area)) idx.l3.push(n.code);
+    for(const prod of (n.products||"").split(";").map(x=>x.trim()).filter(Boolean)){
+      const e=PRODUCT_INDEX[prod]||(PRODUCT_INDEX[prod]={l1:[],l2:[],l3:[]});
+      if(!e.l1.includes(k)) e.l1.push(k);
+      if(!e.l2.includes(area)) e.l2.push(area);
+      e.l3.push(n.code);
+    }
+  }
+  for(const k of Object.keys(PER_L1)) PER_L1[k].sort((a,b)=>a.q<b.q?-1:a.q>b.q?1:0);
+}
+const familyProductOptions = famFilter => [...new Set(
+  (famFilter?familiesOf(famFilter):APP_FAMILIES).flatMap(f=>[...(FAMILY_PRODUCTS[f]||[])]))].sort();
+
 // Does a search result belong to the selected product?
 function inProduct(item,prod){
   if(!prod) return true;
@@ -579,6 +617,7 @@ function AutoDiagram({ l3item, l1key, famFilter }) {
     if (!allowed) return all4;
     // Keep only nodes whose product tag overlaps with the selected family's products
     return all4.filter(s => {
+      if (s.custom) return true; // custom scenarios always belong to their process
       if (!s.p) return false;
       return s.p.split(';').map(p => p.trim()).some(p => allowed.has(p));
     });
@@ -972,8 +1011,9 @@ function L3Accordion({item,l1key,onSelect,selected,prodFilter,famFilter,focus}){
   },[open,item.q,l1key]);
   const scenarios=useMemo(()=>{
     let s=allScenarios;
-    if(prodFilter) s=s.filter(x=>hasProduct(x,prodFilter));
+    if(prodFilter) s=s.filter(x=>x.custom&&!x.p||hasProduct(x,prodFilter));
     if(allowedFamProds) s=s.filter(x=>{
+      if(x.custom) return true; // custom scenarios always show under their process
       if(!x.p) return false;
       return x.p.split(';').map(p=>p.trim()).some(p=>allowedFamProds.has(p));
     });
@@ -997,6 +1037,7 @@ function L3Accordion({item,l1key,onSelect,selected,prodFilter,famFilter,focus}){
       <span onClick={()=>!dimmed&&onSelect(item)} style={{fontSize:13,fontWeight:600,flex:1,
         color:isSelected?"#F16320":"#e8edf4",lineHeight:1.3,cursor:"pointer"}}>{item.t}</span>
       <div style={{display:"flex",gap:5,flexShrink:0,alignItems:"center"}}>
+        <CustomBadge item={item}/>
         <ScopeBadge code={item.q}/>
         {item.sc>0&&<span style={{fontSize:10,padding:"2px 7px",borderRadius:10,
           background:"rgba(241,99,32,0.1)",color:"#F16320",fontWeight:600}}>
@@ -1027,6 +1068,7 @@ function L3Accordion({item,l1key,onSelect,selected,prodFilter,famFilter,focus}){
           {(prodFilter||famFilter)?"No scenarios match this filter.":"No scenarios recorded."}
         </div>
       }
+      <AddNodeButton level={4} parent={item.q} productOptions={familyProductOptions(famFilter)}/>
     </div>}
   </div>;
 }
@@ -1082,6 +1124,7 @@ function L2View({l1idx,l2q,onBack,onL1,onSelect,selected,prodFilter,famFilter,fo
       ?<div style={{fontSize:13,color:"#8a9ab0",fontStyle:"italic",padding:"20px 0"}}>No processes match the selected filter.</div>
       :visibleL3s.map(l3=><L3Accordion key={l3.q} item={l3} l1key={l1key} onSelect={onSelect} selected={selected} prodFilter={prodFilter} famFilter={famFilter} focus={focus}/>)
     }
+    <AddNodeButton level={3} parent={l2q} productOptions={familyProductOptions(famFilter)}/>
   </div>;
 }
 
@@ -1738,6 +1781,7 @@ function useOverviewStats(selected){
 }
 
 /* ── ROOT ── */
+let catalogueRevision = 0;
 export default function App(){
   const [view,setView]             = useState("home");
   const [l1idx,setL1idx]           = useState(null);
@@ -1748,6 +1792,9 @@ export default function App(){
   const [selected,setSelected]     = useState(null);
   const [showHelp,setShowHelp]     = useState(false);
   const [showProjects,setShowProjects] = useState(false);
+  const project = useProject();
+  // Merge the project's custom processes into the catalogue; views remount when they change.
+  const catalogueVersion = useMemo(()=>{ applyCustomNodes(project?.nodes||[]); return ++catalogueRevision; },[project?.nodes]);
   const isSearching=searchQ.length>=2;
   const overviewStats=useOverviewStats(selected);
 
@@ -1771,6 +1818,14 @@ export default function App(){
     goL2(i,item.l===2?item.q:`${s[0]}.${s[1]}.000.000`);
     setFocus(item.l>=3?{q:item.q}:null); // object so re-opening the same item still triggers
   }
+  const findItem = q => (PER_L1[getPrefix(q)]||[]).find(i=>i.q===q);
+  useEffect(()=>{ // keep the details panel in step with edits/removals of custom items
+    if(selected?.custom) setSelected(findItem(selected.q)||null);
+  },[catalogueVersion]);
+  useEffect(()=>{ // open what was just added
+    const item=project?.lastAdded&&findItem(project.lastAdded.code);
+    if(item){ setSelected(item); setFocus({q:item.q}); }
+  },[project?.lastAdded]);
   useEffect(()=>{
     if(!focus) return;
     const t=setTimeout(()=>document.querySelector(`[data-code="${focus.q}"]`)?.scrollIntoView({block:"center",behavior:"smooth"}),150);
@@ -1782,9 +1837,9 @@ export default function App(){
     <TopBar searchQ={searchQ} setSearchQ={handleSearch} onHome={goHome} onHelp={()=>setShowHelp(true)}
       onSummary={()=>{ setSearchQ(""); setView("scope"); }} onProjects={()=>setShowProjects(true)}/>
     <div style={{display:"flex",flex:1,overflow:"hidden",height:"calc(100vh - 50px)"}}>
-      <Sidebar l1idx={l1idx} onL1={goL1} famFilter={famFilter} setFamFilter={setFamFilter}
+      <Sidebar key={"s"+catalogueVersion} l1idx={l1idx} onL1={goL1} famFilter={famFilter} setFamFilter={setFamFilter}
         prodFilter={prodFilter} setProdFilter={setProdFilter}/>
-      <div style={{flex:1,overflowY:"auto",minWidth:0}}>
+      <div key={"c"+catalogueVersion} style={{flex:1,overflowY:"auto",minWidth:0}}>
         {isSearching&&<SearchView q={searchQ} prod={prodFilter} famFilter={famFilter} onSelect={openItem}/>}
         {!isSearching&&view==="scope"&&<ScopeSummary summary={SUMMARY} perL1={PER_L1} famIndex={FAM_INDEX}
           famFilter={famFilter} inFamily={inFamily} onOpenL1={goL1}/>}
@@ -1792,7 +1847,7 @@ export default function App(){
         {!isSearching&&view==="l1"&&l1idx!==null&&<L1View l1idx={l1idx} onL2={goL2} onBack={goHome} onSelect={setSelected} selected={selected} prodFilter={prodFilter} famFilter={famFilter}/>}
         {!isSearching&&view==="l2"&&l1idx!==null&&l2q&&<L2View l1idx={l1idx} l2q={l2q} onBack={goHome} onL1={goL1} onSelect={setSelected} selected={selected} prodFilter={prodFilter} famFilter={famFilter} focus={focus}/>}
       </div>
-      <OverviewPanel item={selected} stats={overviewStats} onClose={()=>setSelected(null)}/>
+      <OverviewPanel item={selected} stats={overviewStats} onClose={()=>setSelected(null)} famFilter={famFilter}/>
     </div>
     <HelpPanel open={showHelp} onClose={()=>setShowHelp(false)}/>
     <ProjectsPanel open={showProjects} onClose={()=>setShowProjects(false)}/>

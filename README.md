@@ -11,12 +11,25 @@ Single-page React app (Vite) plus a small API (Cloudflare Pages Functions + D1).
 - **iCatalyst view**: open `?view=icatalyst` once (remembered per browser); `?view=client` switches back.
   This is a convenience, not access control.
 
+## Master library and custom processes
+
+- **Master library** (Projects → Open master library; iCatalyst key needed): iCatalyst processes and
+  scenarios added on top of Microsoft's catalogue, plus default decisions (scope, fit/gap, notes).
+  Codes carry an `i`: a process under area 10.05 is `10.05.i010.000`; a scenario under process
+  10.05.080 is `10.05.080.i010`.
+- **New client projects start from a copy of the master.** Later master changes don't flow into existing
+  projects; each client keeps the version it started with.
+- **Clients add their own processes and scenarios**, coded with their initials (2–4 letters, set when the
+  project is created and fixed afterwards), e.g. `10.05.ACM010.000`. Clients can edit and remove what they
+  added; library items in their project can only be changed by iCatalyst.
+- Exports show each item's source: Microsoft, iCatalyst library, or client-specific.
+
 ## Client projects
 
-1. In the iCatalyst view, click **Projects**, paste the iCatalyst key, and create a project.
+1. In the iCatalyst view, click **Projects**, paste the iCatalyst key, and create a project (name + initials).
 2. Send the client their **client link** (`/?project=<slug>`). Anyone with the link can edit that project's scoping.
-3. Clients set scope (in / later / out), priority, process owner and notes on L3 processes and L4 scenarios.
-   Scenarios follow their process's scope unless overridden.
+3. Clients set scope (in / later / out), priority, process owner and notes at any level. Lower levels
+   follow the nearest decision above them unless overridden.
 4. iCatalyst sets **fit/gap** (standard, configuration, extension, ISV, gap). The API only accepts fit/gap
    changes carrying the iCatalyst key (`VENDOR_KEY` secret).
 5. **Scope summary** shows progress by end-to-end process and exports:
