@@ -446,7 +446,8 @@ export function ProjectsPanel({open,onClose}){
     cursor:"pointer",fontSize:11,fontWeight:600,padding:"6px 10px",fontFamily:"inherit",whiteSpace:"nowrap"};
   const master=projects?.find(p=>p.is_master);
   const clients=projects?.filter(p=>!p.is_master)||[];
-  const stats=pr=>`${pr.decisions} decisions · ${pr.custom_nodes} custom${pr.last_updated?` · updated ${pr.last_updated.slice(0,10)}`:""}`;
+  const plural=(n,w)=>`${n} ${w}${n===1?"":"s"}`;
+  const stats=pr=>`${plural(pr.decisions,"decision")} · ${pr.custom_nodes} custom${pr.last_updated?` · updated ${pr.last_updated.slice(0,10)}`:""}`;
 
   return <div onClick={onClose} style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.55)",zIndex:300,display:"flex",justifyContent:"flex-end"}}>
     <div onClick={e=>e.stopPropagation()} style={{width:460,maxWidth:"100%",height:"100%",background:"#13151f",

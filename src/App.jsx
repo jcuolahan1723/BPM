@@ -1819,6 +1819,9 @@ export default function App(){
     setFocus(item.l>=3?{q:item.q}:null); // object so re-opening the same item still triggers
   }
   const findItem = q => (PER_L1[getPrefix(q)]||[]).find(i=>i.q===q);
+  // Each new view starts at the top (opening a search result then scrolls to it via focus).
+  const mainRef = useRef(null);
+  useEffect(()=>{ if(mainRef.current) mainRef.current.scrollTop=0; },[view,l1idx,l2q]);
   useEffect(()=>{ // keep the details panel in step with edits/removals of custom items
     if(selected?.custom) setSelected(findItem(selected.q)||null);
   },[catalogueVersion]);
@@ -1839,7 +1842,7 @@ export default function App(){
     <div style={{display:"flex",flex:1,overflow:"hidden",height:"calc(100vh - 50px)"}}>
       <Sidebar key={"s"+catalogueVersion} l1idx={l1idx} onL1={goL1} famFilter={famFilter} setFamFilter={setFamFilter}
         prodFilter={prodFilter} setProdFilter={setProdFilter}/>
-      <div key={"c"+catalogueVersion} style={{flex:1,overflowY:"auto",minWidth:0}}>
+      <div key={"c"+catalogueVersion} ref={mainRef} style={{flex:1,overflowY:"auto",minWidth:0}}>
         {isSearching&&<SearchView q={searchQ} prod={prodFilter} famFilter={famFilter} onSelect={openItem}/>}
         {!isSearching&&view==="scope"&&<ScopeSummary summary={SUMMARY} perL1={PER_L1} famIndex={FAM_INDEX}
           famFilter={famFilter} inFamily={inFamily} onOpenL1={goL1}/>}

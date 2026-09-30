@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "vite build && wrangler pages deploy --branch main",
-    "import-catalogue": "node scripts/import-catalogue.mjs"
+    "import-catalogue": "node scripts/import-catalogue.mjs",
+    "build-guide": "node docs/guide/build-guide.cjs ../D365_Process_Catalogue_User_Guide.docx"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
+    "docx": "^9.8.1",
     "vite": "^6.0.0",
     "wrangler": "^4.144.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
