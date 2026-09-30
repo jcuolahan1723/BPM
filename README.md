@@ -23,6 +23,19 @@ Single-page React app (Vite) plus a small API (Cloudflare Pages Functions + D1).
    - decisions as CSV (opens in Excel);
    - an Azure DevOps CSV import (Epic = L1, Feature = L2, User Story = in-scope L3).
 
+## Refresh the Microsoft catalogue
+
+1. Download the latest Business Process Catalog spreadsheet from https://aka.ms/BusinessProcessCatalog
+   and put it in this folder (spreadsheets are not committed).
+2. Run `npm run import-catalogue -- "Std Business Process Catalog MMM YYYY.xlsx"`.
+   This rewrites `src/catalogue-data.js` and prints totals, links found, and anything it left out
+   (deprecated rows, duplicate IDs, items whose parent is missing).
+3. Check `git diff --stat`, try the site locally, then `npm run deploy`.
+
+The version shown in the app (e.g. "MAR 2026") comes from the spreadsheet file name.
+Client project decisions are keyed by process code, so they carry over to a new catalogue version;
+decisions on codes Microsoft removes stay in the database but no longer appear.
+
 ## Develop and deploy
 
 ```
