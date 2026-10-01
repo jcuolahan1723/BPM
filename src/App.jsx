@@ -1689,7 +1689,7 @@ function HelpPanel({open,onClose}){
       <div style={{padding:"10px 18px",borderTop:"1px solid rgba(20,190,240,0.1)",
         flexShrink:0,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <span style={{fontSize:10,color:"#6b7a90"}}>iCatalyst · D365 Process Catalogue</span>
-        <span style={{fontSize:10,color:"#6b7a90"}}>{CATALOGUE_INFO.version}</span>
+        <span style={{fontSize:10,color:"#6b7a90"}}>Microsoft catalogue: {CATALOGUE_INFO.version}</span>
       </div>
     </div>
   </>;
@@ -1703,7 +1703,7 @@ function TopBar({searchQ,setSearchQ,onHome,onHelp,onSummary,onProjects}){
       <div style={{background:"#ffffff",borderRadius:6,padding:"3px 8px",display:"flex",alignItems:"center",flexShrink:0}}><img src="/icatalyst-logo.jpg" alt="iCatalyst" style={{height:22,width:"auto",display:"block"}}/></div>
       <div style={{width:1,height:24,background:"rgba(20,190,240,0.2)",flexShrink:0}}/>
       <span style={{fontSize:12,fontWeight:500,color:"#8a9ab0",letterSpacing:"-0.2px"}}>D365 Process Catalogue</span>
-      <span style={{fontSize:10,color:"#6b7a90",marginLeft:2}}>{CATALOGUE_INFO.version}</span>
+      <span style={{fontSize:10,color:"#6b7a90",marginLeft:2}}>Microsoft catalogue: {CATALOGUE_INFO.version}</span>
     </div>
     <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:10}}>
       <ProjectBar onSummary={onSummary} onProjects={onProjects}/>
