@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { IS_CLIENT, useProject, ScopeBadge, ScopeEditor, ProjectBar, ScopeSummary, ProjectsPanel,
   CustomBadge, AddNodeButton, CustomNodePanel } from "./project.jsx";
-import { SUMMARY, PER_L1, SP_INDEX, TC_INDEX, FAM_INDEX, TOTALS, APP_FAMILIES, CATALOGUE_INFO } from "./catalogue-data.js";
+import { SUMMARY, PER_L1, SP_INDEX, TC_INDEX, FAM_INDEX, APP_FAMILIES, CATALOGUE_INFO } from "./catalogue-data.js";
 
 
 const LCFG = {
@@ -590,6 +590,35 @@ function inProduct(item,prod){
   if(item.l===2) return idx.l2.includes(item.q);
   if(item.l===3) return idx.l3.includes(item.q);
   return hasProduct(item,prod);
+}
+
+/* What the family/product filters leave visible, counted by the same rules the views use: process areas
+   and processes by the indexes, scenarios by their tags (custom ones always show under a visible process),
+   and system processes / test cases beneath the visible scenarios. Includes merged custom nodes. */
+function filteredCounts(famFilter,prodFilter){
+  const sets=idx=>idx?{l1:new Set(idx.l1),l2:new Set(idx.l2),l3:new Set(idx.l3)}:null;
+  const fam=sets(famFilter&&FAM_INDEX[famFilter]), prod=sets(prodFilter&&(PRODUCT_INDEX[prodFilter]||{l1:[],l2:[],l3:[]}));
+  const famProds=famFilter?FAMILY_PRODUCTS[famFilter]:null;
+  const pass=(lvl,q)=>(!fam||fam[lvl].has(q))&&(!prod||prod[lvl].has(q));
+  const totals={l1:0,l2:0,l3:0,l4:0,l5:0,l6:0}, byL1={};
+  for(const s of SUMMARY){
+    const k=getPrefix(s.q); if(!pass("l1",k)) continue;
+    const items=PER_L1[k]||[], c=byL1[k]={l2:0,l3:0}, l3s=new Set();
+    totals.l1++;
+    for(const i of items){
+      if(i.l===2&&pass("l2",i.q)) c.l2++;
+      else if(i.l===3&&pass("l3",i.q)){ c.l3++; l3s.add(i.q); }
+    }
+    for(const i of items){
+      if(i.l!==4||!l3s.has(i.q.split(".").slice(0,3).join(".")+".000")) continue;
+      if(prodFilter&&!(i.custom&&!i.p||hasProduct(i,prodFilter))) continue;
+      if(famProds&&!i.custom&&!(i.p||"").split(";").some(p=>famProds.has(p.trim()))) continue;
+      totals.l4++;
+      for(const sp of SP_INDEX[k]?.[i.q]||[]){ totals.l5++; totals.l6+=(TC_INDEX[k]?.[sp.q]||[]).length; }
+    }
+    totals.l2+=c.l2; totals.l3+=c.l3;
+  }
+  return {totals,byL1};
 }
 
 /* Search: every word must match (any order); "*" matches any run of characters within a word,
@@ -1190,6 +1219,8 @@ function HomeView({onL1,onSelect,selected,prodFilter,famFilter}){
     return SUMMARY.map((s,i)=>{const p=getPrefix(s.q); return{...s,i,dim:(!!fam&&!fam.has(p))||(!!prod&&!prod.has(p))}});
   },[famFilter,prodFilter]);
   const visibleCount=filteredSummary.filter(s=>!s.dim).length;
+  const counts=useMemo(()=>filteredCounts(famFilter,prodFilter),[famFilter,prodFilter]);
+  const filterLabel=[...familiesOf(famFilter),prodFilter].filter(Boolean).join(" · ");
 
   return <div style={{padding:22}}>
     <div style={{background:"linear-gradient(135deg,#0e1828 0%,#111d2e 100%)",
@@ -1205,15 +1236,16 @@ function HomeView({onL1,onSelect,selected,prodFilter,famFilter}){
         Navigate from EPICs through process areas, processes, scenarios, and system processes down to test cases. Click any item to see its overview in the right-hand panel.
       </p>
     </div>
-    <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-      {[{label:"EPICs",value:TOTALS.l1,color:"#14BEF0"},
-        {label:"Process Areas",value:TOTALS.l2,color:"#0E94A8"},
-        {label:"Processes",value:TOTALS.l3,color:"#F16320"},
-        {label:"Scenarios",value:TOTALS.l4,color:"#F16320"},
-        {label:"Sys Processes",value:TOTALS.l5,color:"#0E94A8"},
-        {label:"Test Cases",value:TOTALS.l6,color:"#14F032"},
+    <div style={{display:"flex",gap:8,marginBottom:filterLabel?6:16,flexWrap:"wrap"}}>
+      {[{label:"EPICs",value:counts.totals.l1,color:"#14BEF0"},
+        {label:"Process Areas",value:counts.totals.l2,color:"#0E94A8"},
+        {label:"Processes",value:counts.totals.l3,color:"#F16320"},
+        {label:"Scenarios",value:counts.totals.l4,color:"#F16320"},
+        {label:"Sys Processes",value:counts.totals.l5,color:"#0E94A8"},
+        {label:"Test Cases",value:counts.totals.l6,color:"#14F032"},
       ].map(s=><StatCard key={s.label} {...s}/>)}
     </div>
+    {filterLabel&&<div style={{fontSize:11,color:"#8a9ab0",marginBottom:16}}>Counts for {filterLabel}</div>}
     <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:16}}>
       {Object.entries(LCFG).map(([k,v])=>(
         <div key={k} style={{display:"flex",alignItems:"center",gap:5,fontSize:11,color:"#6b7a90"}}>
@@ -1227,7 +1259,8 @@ function HomeView({onL1,onSelect,selected,prodFilter,famFilter}){
       <span style={{fontSize:11,color:"#8a9ab0"}}>{IS_CLIENT?`${visibleCount} · Finance and Operations${prodFilter?` · ${prodFilter}`:""}`:(famFilter||prodFilter)?`${visibleCount} of ${SUMMARY.length}`:SUMMARY.length}</span>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:10}}>
-      {filteredSummary.filter(l1=>!(IS_CLIENT&&l1.dim)).map(l1=><EpicCard key={l1.q} item={l1} dim={l1.dim} selected={selected} onSelect={()=>!l1.dim&&onSelect(l1)} onClick={()=>!l1.dim&&onL1(l1.i)}/>)}
+      {filteredSummary.filter(l1=>!(IS_CLIENT&&l1.dim)).map(l1=><EpicCard key={l1.q} item={l1} dim={l1.dim}
+        count={l1.dim?null:counts.byL1[getPrefix(l1.q)]} selected={selected} onSelect={()=>!l1.dim&&onSelect(l1)} onClick={()=>!l1.dim&&onL1(l1.i)}/>)}
     </div>
   </div>;
 }
@@ -1284,7 +1317,8 @@ function SearchView({q,prod,famFilter,onSelect}){
 }
 
 /* ── CARD COMPONENTS ── */
-function EpicCard({item,dim,selected,onSelect,onClick}){
+const plural=(n,one,many=one+"s")=>`${n} ${n===1?one:many}`;
+function EpicCard({item,dim,count,selected,onSelect,onClick}){
   const isSelected=selected?.q===item.q;
   const [hov,setHov]=useState(false);
   return <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
@@ -1301,7 +1335,7 @@ function EpicCard({item,dim,selected,onSelect,onClick}){
       marginBottom:5,lineHeight:1.35,cursor:"pointer"}}
       onMouseEnter={e=>e.currentTarget.style.textDecoration="underline"}
       onMouseLeave={e=>e.currentTarget.style.textDecoration="none"}>{item.t}</div>
-    <div style={{fontSize:11,color:"#8a9ab0",marginBottom:8}}>{item.l2} areas · {item.l3} processes</div>
+    <div style={{fontSize:11,color:"#8a9ab0",marginBottom:8}}>{plural(count?.l2??item.l2,"area")} · {plural(count?.l3??item.l3,"process","processes")}</div>
     <button onClick={e=>{e.stopPropagation();onSelect(item);}}
       style={{fontSize:10,padding:"2px 9px",borderRadius:20,border:`1px solid ${isSelected?"#14BEF0":"rgba(20,190,240,0.2)"}`,
         background:isSelected?"rgba(20,190,240,0.15)":"transparent",color:isSelected?"#14BEF0":"#3d3738",
@@ -1348,6 +1382,7 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter,prodFilter,setProdFilter}){
     return new Set(SUMMARY.map(s=>getPrefix(s.q)).filter(p=>(!fam||fam.has(p))&&(!prod||prod.has(p))));
   },[famFilter,prodFilter]);
   const selectedFams=familiesOf(famFilter);
+  const counts=useMemo(()=>filteredCounts(famFilter,prodFilter),[famFilter,prodFilter]);
 
   // Families can be combined; the product filter lists the products of the selected families.
   function toggleFamily(fam){
@@ -1437,7 +1472,7 @@ function Sidebar({l1idx,onL1,famFilter,setFamFilter,prodFilter,setProdFilter}){
           onMouseLeave={e=>{if(!active)e.currentTarget.style.background=active?"rgba(20,190,240,0.12)":"transparent"}}>
           <span style={{fontFamily:"monospace",fontSize:9,color:"#e8edf4",minWidth:18}}>{String(i+1).padStart(2,"0")}</span>
           <span style={{fontSize:11,color:active?"#14BEF0":"#8a9ab0",flex:1,lineHeight:1.35}}>{l1.t}</span>
-          <span style={{fontSize:9,color:"#e8edf4",background:"#0b0c11",borderRadius:10,padding:"1px 5px",flexShrink:0}}>{l1.l3}</span>
+          <span style={{fontSize:9,color:"#e8edf4",background:"#0b0c11",borderRadius:10,padding:"1px 5px",flexShrink:0}}>{dim?l1.l3:counts.byL1[prefix]?.l3??l1.l3}</span>
         </div>;
       })}
     </div>
